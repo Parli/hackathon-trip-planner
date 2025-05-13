@@ -16,7 +16,7 @@ Gets an arbitrary `plain/text` string stored by its url safe base64 encoded MD5 
 
 `POST /store/`
 
-Stores an arbitrary `plain/text` string and returns the MD5 `hash` as a url safe base64 encoded plain text string.
+Stores an arbitrary `plain/text` body string and returns the MD5 `hash` as a url safe base64 encoded plain text string.
 
 ### External Service Proxy
 
