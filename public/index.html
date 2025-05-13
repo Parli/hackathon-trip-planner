@@ -4,16 +4,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simple Server</title>
+  <title>Node Simple Server: AI Prototype Example</title>
 </head>
 
 <body>
-  <h1>AI Prototype</h1>
+  <h1>AI Prototype Example</h1>
+  <select id="provider">
+    <option value="openai">OpenAI GPT</option>
+    <option value="anthropic">Anthropic Claude</option>
+    <option value="google">Google Gemini</option>
+  </select>
   <form id="search">
     <input id="query" type="text" />
   </form>
   <div id="answer"></div>
 </body>
+<button id="share">Share</button>
 <script type="module">
   import "/main.js";
 </script>
