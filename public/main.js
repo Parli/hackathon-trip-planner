@@ -16,6 +16,15 @@ import { marked } from "https://cdn.jsdelivr.net/npm/marked@15.0.11/+esm";
 // `morphdom` DOM diff minimizer
 import morphdom from "https://cdn.jsdelivr.net/npm/morphdom@2.7.5/+esm";
 
+// Shared config
+// Mapping of models for each provider
+const modelMap = {
+  openai: "gpt-4.1",
+  anthropic: "claude-3-7-sonnet-latest",
+  google: "gemini-2.5-flash-preview-04-17",
+};
+const systemPrompt = `You are an LLM agent`;
+
 // Initialize providers with the proxy url and server side env var interpolation strings
 // https://ai-sdk.dev/docs/reference/ai-sdk-core/provider-registry
 const registry = createProviderRegistry({
@@ -44,12 +53,6 @@ const answerContainer = document.getElementById("answer");
 // Share thread button
 const shareButton = document.getElementById("share");
 shareButton.style.display = "none";
-// Mapping of models for each provider
-const modelMap = {
-  openai: "gpt-4.1",
-  anthropic: "claude-3-7-sonnet-latest",
-  google: "gemini-2.5-flash-preview-04-17",
-};
 // Setup state
 let userQuery = "";
 let answerText = "";
@@ -67,6 +70,7 @@ searchForm.addEventListener("submit", async (event) => {
   // https://ai-sdk.dev/docs/reference/ai-sdk-core/stream-text
   const result = streamText({
     model: registry.languageModel(`${provider}:${model}`),
+    system: systemPrompt,
     prompt: userQuery,
   });
   // Accumulate text parts asyncronously using text stream generator
@@ -103,7 +107,7 @@ shareButton.addEventListener("click", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const [id, value] = [...urlParams.entries()][0] ?? [];
   // Check if parameter is a base64 url safe thread storage id
-  if (!value && /^[a-z0-9_-]+$/i.test(id)) {
+  if (id && /^[a-z0-9_-]+$/i.test(id) && !value) {
     // Retrieve the stored thread from the id
     const storeResponse = await fetch(`/api/store/${id}`);
     // Extract the question and answer data from the storage response
