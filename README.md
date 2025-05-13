@@ -6,6 +6,15 @@ A minimalistic vanilla node.js typescript server for rapid prototyping.
 
 Node.js 23.6.0
 
+## Hackathon Instructions
+
+1. Fork this repo with your project name
+2. Git clone your repo to your machine
+3. Initialize your env vars with `op inject -i example.env -o .env`
+4. Test the server with `npm run dev`
+5. Deploy it to `vetted-staging` cloud run with `npm run deploy`
+6. If you want to remove it you can delete the deployment with `npm run undeploy`
+
 ## Features
 
 ### Persistant Storage

@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.ts",
-    "dev": "node --env-file=.env server.ts"
+    "dev": "node --env-file=.env server.ts",
+    "deploy": "scripts/deploy.sh",
+    "undeploy": "scripts/undeploy.sh"
   },
   "engines": {
     "node": ">=23.6.0"
