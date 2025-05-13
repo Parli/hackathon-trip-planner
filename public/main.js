@@ -48,7 +48,7 @@ let answerText = "";
 // Handle input submission
 searchForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  answerContainer.innerHTML = "";
+  answerContainer.innerHTML = "Loading...";
   shareButton.style.display = "none";
   userQuery = queryInput.value;
   // Send the LLM request
