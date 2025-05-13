@@ -22,13 +22,11 @@ Stores an arbitrary `plain/text` body string and returns the MD5 `hash` as a url
 
 `[GET|POST|PUT|DELETE] /proxy/[proxy-url]`
 
-Allows proxying to the `proxy-url`, forwarding any request.
+Allows proxying to the `proxy-url`, forwarding any request and supports streaming.
 
 Any string matching `${ENV_NAME}` in the header will replace the string with the value of that environment variable.
 
 An accompanying `[ENV_VAR]_ACCESS` variable must be defined to allowlist proxy hosts for filling out these values to prevent leakage. The hosts must include the full host including the subdomain and can be a comma separated list of host names.
-
-Supports streaming.
 
 ### Static File Server
 
