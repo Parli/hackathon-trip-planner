@@ -15,7 +15,9 @@ import { createGoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@ai-sdk/g
 import { marked } from "https://cdn.jsdelivr.net/npm/marked@15.0.11/+esm";
 // `morphdom` DOM diff minimizer
 import morphdom from "https://cdn.jsdelivr.net/npm/morphdom@2.7.5/+esm";
-// Initialize providers with the proxy url and env var interpolation
+
+// Initialize providers with the proxy url and server side env var interpolation strings
+// https://ai-sdk.dev/docs/reference/ai-sdk-core/provider-registry
 const registry = createProviderRegistry({
   openai: createOpenAI({
     baseURL: "/api/proxy/https://api.openai.com/v1",
@@ -31,62 +33,82 @@ const registry = createProviderRegistry({
   }),
 });
 // Setup elements
+// Search form container
 const searchForm = document.getElementById("search");
+// Provider select dropdown
 const providerSelect = document.getElementById("provider");
+// User search input
 const queryInput = document.getElementById("query");
+// Answer display area
 const answerContainer = document.getElementById("answer");
+// Share thread button
 const shareButton = document.getElementById("share");
 shareButton.style.display = "none";
-// Setup state
+// Mapping of models for each provider
 const modelMap = {
   openai: "gpt-4.1",
   anthropic: "claude-3-7-sonnet-latest",
   google: "gemini-2.5-flash-preview-04-17",
 };
+// Setup state
 let userQuery = "";
 let answerText = "";
 // Handle input submission
 searchForm.addEventListener("submit", async (event) => {
+  // Set loading state
   event.preventDefault();
-  answerContainer.innerHTML = "Loading...";
+  answerContainer.innerHTML = "<div><p>Loading...</p></div>";
   shareButton.style.display = "none";
   userQuery = queryInput.value;
   // Send the LLM request
   const provider = providerSelect.value;
   const model = modelMap[provider];
+  // AI SDK's streamText utility for normalizing providers and providing a stream part generator
+  // https://ai-sdk.dev/docs/reference/ai-sdk-core/stream-text
   const result = streamText({
     model: registry.languageModel(`${provider}:${model}`),
     prompt: userQuery,
   });
+  // Accumulate text parts asyncronously using text stream generator
   answerText = "";
-  // Accumulate text parts
   for await (const textPart of result.textStream) {
     answerText += textPart;
-    // Render text to the answer container
+    // Render markdown text to an html string
+    // https://marked.js.org/#usage
     const html = marked.parse(answerText);
+    // Diffs the existing HTML and updates it with minimal changes to preserve prior DOM nodes
+    // https://www.npmjs.com/package/morphdom#api
     morphdom(answerContainer, `<div>${html}</div>`, {
       childrenOnly: true,
     });
   }
+  // Set complete state
   shareButton.style.display = "";
 });
 // Handle share button click
 shareButton.addEventListener("click", async () => {
+  // Store the question and answer text on the server store route
   const storeResponse = await fetch("/api/store/", {
     method: "POST",
     body: JSON.stringify({ question: userQuery, answer: answerText }),
   });
+  // Get the url safe base64 storage id from the server store response
   const storeId = await storeResponse.text();
-  const shareUrl = `${window.location.origin}?${storeId}`;
-  window.location = shareUrl;
+  // Redirect to the share url
+  window.location = `?${storeId}`;
 });
-// Init state
+// Init app state
 (async function init() {
+  // Get url parameters for parsing thread storage id
   const urlParams = new URLSearchParams(window.location.search);
   const [id, value] = [...urlParams.entries()][0] ?? [];
+  // Check if parameter is a base64 url safe thread storage id
   if (!value && /^[a-z0-9_-]+$/i.test(id)) {
+    // Retrieve the stored thread from the id
     const storeResponse = await fetch(`/api/store/${id}`);
+    // Extract the question and answer data from the storage response
     const { question, answer } = await storeResponse.json();
+    // Update the app state with the thread data
     queryInput.value = question;
     const html = marked.parse(answer);
     answerContainer.innerHTML = `<div>${html}</div>`;
