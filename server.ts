@@ -182,135 +182,150 @@ const server = http.createServer(
     maxHeaderSize: 16384 * 4, // Increase the default header size limit (default is 16KB, we're setting to 64KB)
   },
   (req, res) => {
-    const urlPath = req.url?.split("?")[0];
-    console.log(`${req.method} ${urlPath}`);
+    console.log(`${req.method} ${req.url?.split("?").at(0)}`);
 
     // Set CORS headers for all responses
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "*");
     res.setHeader("Access-Control-Allow-Headers", "*");
 
-    // Handle OPTIONS requests (preflight)
+    // Request routing
     if (req.method === "OPTIONS") {
+      // Handle OPTIONS requests (preflight)
       res.statusCode = 204;
       res.end();
+    } else if (req.url?.startsWith("/api/store/")) {
+      // Handle storage requests
+      storeRoute(req, res);
+    } else
+    if (req.url?.startsWith("/api/proxy/")) {
+      // Handle proxy requests
+      proxyRoute(req, res);
+    } else {
+      // Handle static file requests
+      staticRoute(req, res);
+    }
+  }
+);
+
+const storeRoute: http.RequestListener = (req, res) => {
+    if (req.method === "GET") {
+      const hashId = req.url?.replace("/api/store/", "");
+      if (hashId && storage[hashId] !== undefined) {
+        res.writeHead(200);
+        res.end(storage[hashId].body);
+      } else {
+        res.writeHead(404);
+        res.end("404 Not Found");
+      }
       return;
     }
+    if (req.method === "POST") {
+      let body = "";
+      const hash = crypto.createHash("md5");
+      req.on("data", (chunk) => {
+        const chunkString = chunk.toString();
+        hash.update(chunkString);
+        body += chunkString;
+      });
 
-    // Handle storage requests
-    if (req.url?.startsWith("/api/store/")) {
-      if (req.method === "GET") {
-        const hashId = req.url.replace("/api/store/", "");
-        if (hashId && storage[hashId] !== undefined) {
-          res.writeHead(200);
-          res.end(storage[hashId].body);
-        } else {
-          res.writeHead(404);
-          res.end("404 Not Found");
+      req.on("end", () => {
+        if (body.length > 100000) {
+          res.writeHead(413, { "Content-Type": "text/plain" });
+          res.end("Error content too large");
+          return;
+        }
+        try {
+          const hashId = hash
+            .digest("base64")
+            .replaceAll("=", "")
+            .replaceAll("+", "-")
+            .replaceAll("/", "_");
+          const modified = Date.now();
+          const created = storage[hashId]?.created ?? modified;
+          storage[hashId] = {
+            created,
+            modified,
+            body,
+          };
+          // Save to file after updating storage
+          saveStorage();
+          res.writeHead(created === modified ? 201 : 200);
+          res.end(hashId);
+        } catch (error) {
+          console.error("Error processing storage request:", error);
+          res.writeHead(500);
+          res.end("Storage request error" );
         }
         return;
-      }
-      if (req.method === "POST") {
-        let body = "";
-        const hash = crypto.createHash("md5");
-        req.on("data", (chunk) => {
-          const chunkString = chunk.toString();
-          hash.update(chunkString);
-          body += chunkString;
-        });
-
-        req.on("end", () => {
-          if (body.length > 100000) {
-            res.writeHead(413, { "Content-Type": "text/plain" });
-            res.end("Error content too large");
-            return;
-          }
-          try {
-            const hashId = hash
-              .digest("base64")
-              .replaceAll("=", "")
-              .replaceAll("+", "-")
-              .replaceAll("/", "_");
-            const modified = Date.now();
-            const created = storage[hashId]?.created ?? modified;
-            storage[hashId] = {
-              created,
-              modified,
-              body,
-            };
-            // Save to file after updating storage
-            saveStorage();
-            res.writeHead(created === modified ? 201 : 200);
-            res.end(hashId);
-          } catch (error) {
-            console.error("Error processing storage request:", error);
-            res.writeHead(500);
-            res.end("Storage request error" );
-          }
-          return;
-        });
-        return;
-      }
-    }
-
-    // Handle proxy requests
-    if (req.url?.startsWith("/api/proxy/")) {
-      try {
-        // Set up the request to target resource
-        const proxyUrl = new URL(
-          decodeURIComponent(req.url.replace("/api/proxy/", ""))
-        );
-
-        // Create a filtered copy of the headers
-        const filteredHeaders: Record<string, string> = Object.fromEntries(Object.entries(req.headers).flatMap(([key, value]) => {
-          const lowerKey = key.toLowerCase();
-          const valueString = Array.isArray(value) ? value.join(",") : value;
-          // Skip host-specific and browser security headers
-          if (
-            [
-              "host",
-              "connection",
-              "content-length",
-              "user-agent",
-              "origin",
-              "referer",
-            ].includes(lowerKey) ||
-            lowerKey.startsWith("sec-") || valueString === undefined
-          ) {
-            return [];
-          }
-          // Replace env vars if they match pattern "${ENV_VAR}"
-          const interpolatedValue = typeof valueString === "string" ? interpolateEnvVars(valueString, proxyUrl.host) : valueString;
-          return [[key, interpolatedValue]]
-        }))
-
-        const options = {
-          method: req.method,
-          headers: filteredHeaders,
-        };
-
-        // Forward the request to the proxy resource and pipe it back to the original response
-        const proxyReq = https.request(interpolateEnvVars(proxyUrl.toString(), proxyUrl.host), options, (proxyRes) => {
-          res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers);
-          proxyRes.pipe(res);
-        });
-
-        // Handle proxy request errors
-        proxyReq.on("error", (error) => {
-          console.error("Proxy connection error:", error);
-          res.writeHead(500);
-          res.end("Proxy connection error");
-        });
-
-        // Forward the original request body to the proxy request
-        req.pipe(proxyReq);
-      } catch (error) {
-        console.error("Proxy request error:", error);
-        res.writeHead(500);
-        res.end("Proxy request error");
-      }
+      });
       return;
     }
+}
+
+const proxyRoute: http.RequestListener = (req, res) => {
+  if (!req.url) {
+    return;
+  }
+    try {
+      // Set up the request to target resource
+      const proxyUrl = new URL(
+        decodeURIComponent(req.url.replace("/api/proxy/", ""))
+      );
+
+      // Create a filtered copy of the headers
+      const filteredHeaders: Record<string, string> = Object.fromEntries(Object.entries(req.headers).flatMap(([key, value]) => {
+        const lowerKey = key.toLowerCase();
+        const valueString = Array.isArray(value) ? value.join(",") : value;
+        // Skip host-specific and browser security headers
+        if (
+          [
+            "host",
+            "connection",
+            "content-length",
+            "user-agent",
+            "origin",
+            "referer",
+          ].includes(lowerKey) ||
+          lowerKey.startsWith("sec-") || valueString === undefined
+        ) {
+          return [];
+        }
+        // Replace env vars if they match pattern "${ENV_VAR}"
+        const interpolatedValue = typeof valueString === "string" ? interpolateEnvVars(valueString, proxyUrl.host) : valueString;
+        return [[key, interpolatedValue]]
+      }))
+
+      const options = {
+        method: req.method,
+        headers: filteredHeaders,
+      };
+
+      // Forward the request to the proxy resource and pipe it back to the original response
+      const proxyReq = https.request(interpolateEnvVars(proxyUrl.toString(), proxyUrl.host), options, (proxyRes) => {
+        res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers);
+        proxyRes.pipe(res);
+      });
+
+      // Handle proxy request errors
+      proxyReq.on("error", (error) => {
+        console.error("Proxy connection error:", error);
+        res.writeHead(500);
+        res.end("Proxy connection error");
+      });
+
+      // Forward the original request body to the proxy request
+      req.pipe(proxyReq);
+    } catch (error) {
+      console.error("Proxy request error:", error);
+      res.writeHead(500);
+      res.end("Proxy request error");
+    }
+    return;
+}
+
+const staticRoute: http.RequestListener = (req, res) => {
+  const urlPath = req.url?.split("?")[0] ?? "/";
 
     // If URL is '/', serve index.html
     const filePath = urlPath === "/" ? "/index.html" : urlPath;
@@ -352,8 +367,7 @@ const server = http.createServer(
         return;
       }
     });
-  }
-);
+}
 
 server.listen(port, () => {
   console.log(`Server running at http://localhost:${port}/`);
