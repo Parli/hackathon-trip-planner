@@ -77,7 +77,8 @@ searchForm.addEventListener("submit", async (event) => {
   answerText = "";
   for await (const textPart of result.textStream) {
     answerText += textPart;
-    // Render markdown text to an html string
+    // Render markdown text to an html string. HTML tags are supported and can be streamed in.
+    // HTML web components tag can be used for custom content and does not require post-processing.
     // https://marked.js.org/#usage
     const html = marked.parse(answerText);
     // Diffs the existing HTML and updates it with minimal changes to preserve prior DOM nodes
