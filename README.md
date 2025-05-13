@@ -1,4 +1,4 @@
-# Simple Server
+# Node Simple Server
 
 A minimalistic vanilla node.js typescript server for rapid prototyping.
 
@@ -52,6 +52,6 @@ A mounted cloud bucket can be used for persistence on a deployed server.
 
 Simple Server can be easily deployed to Google Cloud Run using source based deployment.
 
-1. [Build and deploy a Node.js app.](https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-nodejs-service)
+1. [Build and deploy a Node.js app.](https://cloud.google.com/run/docs/quickstarts/build-and-deploy/deploy-nodejs-service#deploy)
 2. [Configure environment variables.](https://cloud.google.com/run/docs/configuring/services/environment-variables)
 3. [Mount a storage bucket as a volume mount.](https://cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts)
