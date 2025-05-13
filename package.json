@@ -1,0 +1,20 @@
+{
+  "name": "simple-server",
+  "description": "A simple zero build dependency vanilla Node.js HTTP server with static serving, proxying, and storage",
+  "version": "0.0.0",
+  "main": "server.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node server.ts",
+    "dev": "node --env-file=.env server.ts"
+  },
+  "engines": {
+    "node": ">=23.6.0"
+  },
+  "volta": {
+    "node": "23.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3"
+  }
+}
