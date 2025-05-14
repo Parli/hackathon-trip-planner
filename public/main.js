@@ -78,10 +78,12 @@ searchForm.addEventListener("submit", async (event) => {
   for await (const textPart of result.textStream) {
     answerText += textPart;
     // Render markdown text to an html string. HTML tags are supported and can be streamed in.
-    // HTML web components tag can be used for custom content and does not require post-processing.
+    // HTML web components tags are also supported out of the box and can be used for custom content.
+    // No additional post-processing is necessary
     // https://marked.js.org/#usage
     const html = marked.parse(answerText);
-    // Diffs the existing HTML and updates it with minimal changes to preserve prior DOM nodes
+    // Diffs the existing HTML and updates it with minimal changes to preserve prior DOM nodes.
+    // This supports web components out of the box and no post-processing is necessary.
     // https://www.npmjs.com/package/morphdom#api
     morphdom(answerContainer, `<div>${html}</div>`, {
       childrenOnly: true,
