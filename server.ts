@@ -167,7 +167,13 @@ function interpolateEnvVars(value: string, host: string): string {
     const envVarAllowed =
       envVarValue !== undefined &&
       envVarAccess !== undefined &&
-      (envVarAccess === "*" || envVarAccess.split(",").includes(host));
+      (envVarAccess === "*" ||
+        envVarAccess
+          .split(",")
+          .some(
+            (allowHost) =>
+              host.endsWith(`.${allowHost.trim()}`) || host === allowHost
+          ));
     // Check that the env var exists
     if (envVarValue === undefined) {
       console.error(`Interpolation error: "${envVarName}" value not defined`);
@@ -322,7 +328,10 @@ const proxyRoute: http.RequestListener = (req, res) => {
           return [];
         }
         // Replace env vars if they match pattern "${ENV_VAR}"
-        const interpolatedValue = interpolateEnvVars(valueString, proxyUrl.host);
+        const interpolatedValue = interpolateEnvVars(
+          valueString,
+          proxyUrl.host
+        );
         return [[key, interpolatedValue]];
       })
     );
@@ -360,9 +369,9 @@ const proxyRoute: http.RequestListener = (req, res) => {
 };
 
 /**
-  * `GET /[file-name]`
-  * If no other route matches, files in the `public` directory will be returned.
-  * This ignores the path and hash URL segments.
+ * `GET /[file-name]`
+ * If no other route matches, files in the `public` directory will be returned.
+ * This ignores the path and hash URL segments.
  */
 const staticRoute: http.RequestListener = (req, res) => {
   const urlPath = req.url?.split("?")[0] ?? "/";
