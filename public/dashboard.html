@@ -12,30 +12,30 @@
       padding: 0;
       background-color: #f5f5f5;
     }
-    
+
     .container {
       max-width: 1200px;
       margin: 0 auto;
       padding: 2rem;
     }
-    
+
     header {
       background-color: #333;
       color: white;
       padding: 1rem 2rem;
       margin-bottom: 2rem;
     }
-    
+
     h1 {
       margin: 0;
     }
-    
+
     .tabs {
       display: flex;
       margin-bottom: 2rem;
       border-bottom: 1px solid #ddd;
     }
-    
+
     .tab {
       padding: 0.8rem 1.5rem;
       cursor: pointer;
@@ -45,34 +45,34 @@
       margin-right: 0.5rem;
       border-radius: 4px 4px 0 0;
     }
-    
+
     .tab.active {
       background-color: white;
       font-weight: bold;
     }
-    
+
     .tab-content {
       display: none;
       background-color: white;
       padding: 1.5rem;
       border-radius: 4px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    
+
     .tab-content.active {
       display: block;
     }
-    
+
     .form-group {
       margin-bottom: 1rem;
     }
-    
+
     label {
       display: block;
       margin-bottom: 0.5rem;
       font-weight: bold;
     }
-    
+
     input[type="text"],
     textarea {
       width: 100%;
@@ -81,7 +81,7 @@
       border-radius: 4px;
       font-size: 1rem;
     }
-    
+
     button {
       padding: 0.8rem 1.5rem;
       background-color: #4CAF50;
@@ -92,11 +92,11 @@
       font-size: 1rem;
       margin-top: 1rem;
     }
-    
+
     button:hover {
       background-color: #45a049;
     }
-    
+
     .result {
       margin-top: 2rem;
       padding: 1.5rem;
@@ -104,14 +104,14 @@
       border-radius: 4px;
       border: 1px solid #ddd;
     }
-    
+
     .loading {
       text-align: center;
       margin: 2rem 0;
       font-style: italic;
       color: #666;
     }
-    
+
     .error {
       padding: 1rem;
       background-color: #ffebee;
@@ -119,7 +119,7 @@
       border-radius: 4px;
       margin-top: 1rem;
     }
-    
+
     pre {
       white-space: pre-wrap;
       background-color: #f5f5f5;
@@ -156,13 +156,13 @@
         <div>
           <input type="radio" id="search-type-web" name="search-type" value="search" checked>
           <label for="search-type-web">Web</label>
-          
+
           <input type="radio" id="search-type-places" name="search-type" value="places">
           <label for="search-type-places">Places</label>
-          
+
           <input type="radio" id="search-type-images" name="search-type" value="images">
           <label for="search-type-images">Images</label>
-          
+
           <input type="radio" id="search-type-maps" name="search-type" value="maps">
           <label for="search-type-maps">Maps</label>
         </div>
@@ -207,7 +207,8 @@
       <h2>Test Query Plan Generation</h2>
       <div class="form-group">
         <label for="query-plan-input">Travel Topic:</label>
-        <textarea id="query-plan-input" rows="3" placeholder="Enter travel topic or question to generate search queries, e.g., 'best time to visit Japan' or 'things to do in Barcelona'"></textarea>
+        <textarea id="query-plan-input" rows="3"
+          placeholder="Enter travel topic or question to generate search queries, e.g., 'best time to visit Japan' or 'things to do in Barcelona'"></textarea>
       </div>
       <button id="query-plan-button">Generate Queries</button>
       <div id="query-plan-loading" class="loading" style="display: none;">Generating queries...</div>
@@ -222,7 +223,8 @@
       <h2>Test Page Content Extraction</h2>
       <div class="form-group">
         <label for="page-content-url">URL:</label>
-        <input type="text" id="page-content-url" placeholder="Enter URL to extract content from (e.g., https://en.wikipedia.org/wiki/Paris)">
+        <input type="text" id="page-content-url"
+          placeholder="Enter URL to extract content from (e.g., https://en.wikipedia.org/wiki/Paris)">
       </div>
       <button id="page-content-button">Extract Content</button>
       <div id="page-content-loading" class="loading" style="display: none;">Extracting content...</div>
@@ -232,7 +234,9 @@
         <div>
           <h4 id="page-content-title"></h4>
           <p id="page-content-site"></p>
-          <div id="page-content-text" style="max-height: 400px; overflow-y: auto; padding: 1rem; border: 1px solid #ddd; margin-top: 1rem;"></div>
+          <pre id="page-content-text"
+            style="max-height: 400px; overflow-y: auto; padding: 1rem; border: 1px solid #ddd; margin-top: 1rem;">
+          </pre>
         </div>
       </div>
     </div>
@@ -241,7 +245,8 @@
       <h2>Test Research Functions</h2>
       <div class="form-group">
         <label for="research-query">Research Topic:</label>
-        <textarea id="research-query" rows="3" placeholder="Enter travel research topic, e.g., 'best time to visit Japan' or 'things to do in Barcelona'"></textarea>
+        <textarea id="research-query" rows="3"
+          placeholder="Enter travel research topic, e.g., 'best time to visit Japan' or 'things to do in Barcelona'"></textarea>
       </div>
       <button id="research-button">Research</button>
       <div id="research-loading" class="loading" style="display: none;">Researching (this may take a minute)...</div>

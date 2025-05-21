@@ -224,10 +224,7 @@ pageContentForm.button.addEventListener("click", async () => {
 
     // Format the content text for readability
     const textContent = content.content || "No content extracted";
-    pageContentForm.text.innerHTML = textContent
-      .split("\n")
-      .map((line) => (line.trim() ? `<p>${line}</p>` : "<br>"))
-      .join("");
+    pageContentForm.text.innerHTML = textContent;
 
     pageContentForm.result.style.display = "block";
   } catch (error) {

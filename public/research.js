@@ -593,6 +593,11 @@ User Example: "South east asia chill island vibes, affordable, relaxing, nature 
  */
 async function getPageContent(url) {
   try {
+    // Special handling for Reddit URLs
+    if (url.includes("reddit.com")) {
+      return await getRedditContent(url);
+    }
+
     // Use the proxy endpoint to fetch the web page
     const proxyUrl = `/api/proxy/${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl, {
@@ -649,6 +654,107 @@ async function getPageContent(url) {
       url,
       siteName: new URL(url).hostname,
       title: `Get Page Content Error ${url}: ${error.message}`,
+      content: "",
+      success: false,
+    };
+  }
+}
+
+/**
+ * Gets content from a Reddit URL by using the JSON API
+ * @param {string} url Reddit URL
+ * @returns {Promise<PageContent>} Reddit content in markdown format
+ */
+async function getRedditContent(url) {
+  try {
+    // Add .json to the Reddit URL to get the JSON version
+    const jsonUrl = url.endsWith("/") ? `${url}.json` : `${url}.json`;
+
+    // Fetch the JSON directly from client side
+    const response = await fetch(jsonUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Reddit JSON: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Extract post information
+    const post = data[0]?.data?.children[0]?.data;
+    if (!post) {
+      throw new Error("Could not find post data in Reddit JSON response");
+    }
+
+    // Get comments from the second part of the response
+    const comments = data[1]?.data?.children || [];
+
+    // Build markdown content
+    let markdown = `# ${post.title}\n\n`;
+
+    // Add post content if available
+    if (post.selftext) {
+      markdown += `${post.selftext}\n\n`;
+    }
+
+    markdown += `\n`;
+
+    // Process comments recursively
+    function processComments(comments, depth = 0) {
+      let result = "";
+      // Use > characters to indicate depth: >, >>, >>>, etc.
+      const indent = ">".repeat(depth + 1) + " ";
+
+      for (const comment of comments) {
+        // Skip deleted/removed comments and non-comment objects
+        if (
+          comment.kind !== "t1" ||
+          !comment.data ||
+          comment.data.body === "[deleted]" ||
+          comment.data.body === "[removed]"
+        ) {
+          continue;
+        }
+
+        // Add comment with proper indentation
+        result += `${indent}${comment.data.body.replace(
+          /\n+/g,
+          "\n" + indent
+        )}\n\n`;
+
+        // Process replies recursively if they exist
+        if (
+          comment.data.replies &&
+          comment.data.replies.data &&
+          comment.data.replies.data.children
+        ) {
+          result += processComments(
+            comment.data.replies.data.children,
+            depth + 1
+          );
+        }
+      }
+
+      return result;
+    }
+
+    // Add comments to markdown
+    markdown += processComments(comments);
+
+    return {
+      url,
+      siteName: "Reddit",
+      title: post.title,
+      content: markdown,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error fetching Reddit content:", error);
+
+    // Return error info
+    return {
+      url,
+      siteName: "Reddit",
+      title: `Reddit Content Error: ${error.message}`,
       content: "",
       success: false,
     };
