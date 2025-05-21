@@ -5,10 +5,273 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trip Planner: Testing Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      background-color: #333;
+      color: white;
+      padding: 1rem 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    h1 {
+      margin: 0;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .tab {
+      padding: 0.8rem 1.5rem;
+      cursor: pointer;
+      background-color: #f0f0f0;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      margin-right: 0.5rem;
+      border-radius: 4px 4px 0 0;
+    }
+    
+    .tab.active {
+      background-color: white;
+      font-weight: bold;
+    }
+    
+    .tab-content {
+      display: none;
+      background-color: white;
+      padding: 1.5rem;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 0.8rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    
+    button {
+      padding: 0.8rem 1.5rem;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+    
+    .result {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+    
+    .loading {
+      text-align: center;
+      margin: 2rem 0;
+      font-style: italic;
+      color: #666;
+    }
+    
+    .error {
+      padding: 1rem;
+      background-color: #ffebee;
+      color: #c62828;
+      border-radius: 4px;
+      margin-top: 1rem;
+    }
+    
+    pre {
+      white-space: pre-wrap;
+      background-color: #f5f5f5;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
 </head>
 
 <body>
-  <!-- Dashboard for testing the results of research functions -->
+  <header>
+    <h1>Trip Planner: Testing Dashboard</h1>
+  </header>
+
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" data-tab="search">Search</div>
+      <div class="tab" data-tab="weather">Weather</div>
+      <div class="tab" data-tab="query-plan">Query Plan</div>
+      <div class="tab" data-tab="page-content">Page Content</div>
+      <div class="tab" data-tab="research">Research</div>
+      <div class="tab" data-tab="place">Place Info</div>
+    </div>
+
+    <div id="search-tab" class="tab-content active">
+      <h2>Test Search API</h2>
+      <div class="form-group">
+        <label for="search-query">Search Query:</label>
+        <input type="text" id="search-query" placeholder="Enter search query">
+      </div>
+      <div class="form-group">
+        <label>Search Type:</label>
+        <div>
+          <input type="radio" id="search-type-web" name="search-type" value="search" checked>
+          <label for="search-type-web">Web</label>
+          
+          <input type="radio" id="search-type-places" name="search-type" value="places">
+          <label for="search-type-places">Places</label>
+          
+          <input type="radio" id="search-type-images" name="search-type" value="images">
+          <label for="search-type-images">Images</label>
+          
+          <input type="radio" id="search-type-maps" name="search-type" value="maps">
+          <label for="search-type-maps">Maps</label>
+        </div>
+      </div>
+      <button id="search-button">Search</button>
+      <div id="search-loading" class="loading" style="display: none;">Searching...</div>
+      <div id="search-error" class="error" style="display: none;"></div>
+      <div id="search-result" class="result" style="display: none;">
+        <h3>Search Results:</h3>
+        <pre id="search-result-json"></pre>
+      </div>
+    </div>
+
+    <div id="weather-tab" class="tab-content">
+      <h2>Test Weather API</h2>
+      <div class="form-group">
+        <label for="weather-latitude">Latitude:</label>
+        <input type="text" id="weather-latitude" placeholder="Enter latitude (e.g., 40.7128)">
+      </div>
+      <div class="form-group">
+        <label for="weather-longitude">Longitude:</label>
+        <input type="text" id="weather-longitude" placeholder="Enter longitude (e.g., -74.0060)">
+      </div>
+      <div class="form-group">
+        <label for="weather-start-date">Start Date:</label>
+        <input type="date" id="weather-start-date">
+      </div>
+      <div class="form-group">
+        <label for="weather-end-date">End Date:</label>
+        <input type="date" id="weather-end-date">
+      </div>
+      <button id="weather-button">Get Weather</button>
+      <div id="weather-loading" class="loading" style="display: none;">Fetching weather data...</div>
+      <div id="weather-error" class="error" style="display: none;"></div>
+      <div id="weather-result" class="result" style="display: none;">
+        <h3>Weather Results:</h3>
+        <pre id="weather-result-json"></pre>
+      </div>
+    </div>
+
+    <div id="query-plan-tab" class="tab-content">
+      <h2>Test Query Plan Generation</h2>
+      <div class="form-group">
+        <label for="query-plan-input">Travel Topic:</label>
+        <textarea id="query-plan-input" rows="3" placeholder="Enter travel topic or question to generate search queries, e.g., 'best time to visit Japan' or 'things to do in Barcelona'"></textarea>
+      </div>
+      <button id="query-plan-button">Generate Queries</button>
+      <div id="query-plan-loading" class="loading" style="display: none;">Generating queries...</div>
+      <div id="query-plan-error" class="error" style="display: none;"></div>
+      <div id="query-plan-result" class="result" style="display: none;">
+        <h3>Generated Search Queries:</h3>
+        <div id="query-plan-result-content"></div>
+      </div>
+    </div>
+
+    <div id="page-content-tab" class="tab-content">
+      <h2>Test Page Content Extraction</h2>
+      <div class="form-group">
+        <label for="page-content-url">URL:</label>
+        <input type="text" id="page-content-url" placeholder="Enter URL to extract content from (e.g., https://en.wikipedia.org/wiki/Paris)">
+      </div>
+      <button id="page-content-button">Extract Content</button>
+      <div id="page-content-loading" class="loading" style="display: none;">Extracting content...</div>
+      <div id="page-content-error" class="error" style="display: none;"></div>
+      <div id="page-content-result" class="result" style="display: none;">
+        <h3>Page Content:</h3>
+        <div>
+          <h4 id="page-content-title"></h4>
+          <p id="page-content-site"></p>
+          <div id="page-content-text" style="max-height: 400px; overflow-y: auto; padding: 1rem; border: 1px solid #ddd; margin-top: 1rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="research-tab" class="tab-content">
+      <h2>Test Research Functions</h2>
+      <div class="form-group">
+        <label for="research-query">Research Topic:</label>
+        <textarea id="research-query" rows="3" placeholder="Enter travel research topic, e.g., 'best time to visit Japan' or 'things to do in Barcelona'"></textarea>
+      </div>
+      <button id="research-button">Research</button>
+      <div id="research-loading" class="loading" style="display: none;">Researching (this may take a minute)...</div>
+      <div id="research-error" class="error" style="display: none;"></div>
+      <div id="research-result" class="result" style="display: none;">
+        <h3>Research Results:</h3>
+        <div id="research-result-content"></div>
+      </div>
+    </div>
+
+    <div id="place-tab" class="tab-content">
+      <h2>Test Place Info API</h2>
+      <div class="form-group">
+        <label for="place-name">Place Name:</label>
+        <input type="text" id="place-name" placeholder="Enter place name (e.g., 'Eiffel Tower')">
+      </div>
+      <div class="form-group">
+        <label for="place-address">Address/Location (optional):</label>
+        <input type="text" id="place-address" placeholder="Enter address or location context (e.g., 'Paris, France')">
+      </div>
+      <button id="place-button">Get Place Info</button>
+      <div id="place-loading" class="loading" style="display: none;">Fetching place data...</div>
+      <div id="place-error" class="error" style="display: none;"></div>
+      <div id="place-result" class="result" style="display: none;">
+        <h3>Place Info:</h3>
+        <div id="place-result-content"></div>
+        <pre id="place-result-json"></pre>
+      </div>
+    </div>
+  </div>
 </body>
 <script type="module">
   import "/dashboard.js";

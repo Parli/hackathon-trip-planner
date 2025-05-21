@@ -112,10 +112,36 @@
  * Searches web results against a query
  * @param {string} query Queries to search against SERPER web search API
  * @param {"search"|"images"|"places"|"maps"} type Type of query to search against SERPER web search API
- * @returns {SerperResult} SERPER Search result object
+ * @returns {Promise<SerperResult>} SERPER Search result object
  */
-async function getSearch(query, type) {
-  // Hit SERPER API at `https://google.serper.dev/${type}` via proxy endpoint with the query and return results
+async function getSearch(query, type = "search") {
+  try {
+    const url = `/api/proxy/https://google.serper.dev/${type}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": "${SERPER_API_KEY}",
+      },
+      body: JSON.stringify({
+        q: query,
+        gl: "us",
+        num: 5,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Search API error: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error in getSearch:", error);
+    throw error;
+  }
 }
 
 /**
@@ -160,17 +186,56 @@ async function getSearch(query, type) {
 /**
  * Searches historical weather data
  * @param {{latitude:number,longitude:number}} coordinates
- * @param {Timestamp} startDate
- * @param {Timestamp} endDate
- * @returns {WeatherData} Open-meteo historic weather result object
+ * @param {Timestamp} startDate Unix timestamp in seconds
+ * @param {Timestamp} endDate Unix timestamp in seconds
+ * @returns {Promise<WeatherData>} Open-meteo historic weather result object
  */
 async function getHistoricWeather(coordinates, startDate, endDate) {
-  // Hit Open-meteo API at:
-  // `https://archive-api.open-meteo.com/v1/archive` via proxy endpoint
-  // URL takes the following query parameters defined at `https://open-meteo.com/en/docs/historical-weather-api`:
-  // latitude=number
-  // longitude=number
-  // start_date=YYYY-MM-DD
-  // end_date=YYYY-MM-DD
-  // daily=weather_code,temperature_2m_mean,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,rain_sum,snowfall_sum,wind_speed_10m_max,wind_gusts_10m_max
+  try {
+    // Convert timestamps to YYYY-MM-DD format
+    const formatDate = (timestamp) => {
+      const date = new Date(timestamp * 1000);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(date.getDate()).padStart(2, "0")}`;
+    };
+
+    const startDateFormatted = formatDate(startDate);
+    const endDateFormatted = formatDate(endDate);
+
+    // Create the API URL with query parameters
+    const url =
+      `/api/proxy/https://archive-api.open-meteo.com/v1/archive?` +
+      `latitude=${coordinates.latitude}&` +
+      `longitude=${coordinates.longitude}&` +
+      `start_date=${startDateFormatted}&` +
+      `end_date=${endDateFormatted}&` +
+      `daily=weather_code,temperature_2m_mean,temperature_2m_max,temperature_2m_min,sunrise,sunset,` +
+      `precipitation_sum,rain_sum,snowfall_sum,wind_speed_10m_max,wind_gusts_10m_max`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Weather API error: ${response.status} ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error in getHistoricWeather:", error);
+    throw error;
+  }
 }
+
+/**
+ * Helper function for web search - a simpler interface to getSearch for web queries
+ * @param {string} query Search query
+ * @returns {Promise<SerperResult>} SERPER Search result for web search
+ */
+async function getWebSearch(query) {
+  return getSearch(query, "search");
+}
+
+export { getSearch, getHistoricWeather, getWebSearch };

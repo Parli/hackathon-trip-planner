@@ -307,13 +307,13 @@ const proxyRoute: http.RequestListener = (req, res) => {
       decodeURIComponent(req.url.replace("/api/proxy/", ""))
     );
 
+    const omitClientHeaders = !Boolean(req.headers["x-include-client-headers"]);
     // Create a filtered copy of the headers
     const filteredHeaders: Record<string, string> = Object.fromEntries(
       Object.entries(req.headers).flatMap(([key, value]) => {
         const lowerKey = key.toLowerCase();
         const valueString = Array.isArray(value) ? value.join(",") : value;
-        // Skip host-specific and browser security headers
-        if (
+        const isClientHeader =
           [
             "host",
             "connection",
@@ -321,9 +321,12 @@ const proxyRoute: http.RequestListener = (req, res) => {
             "user-agent",
             "origin",
             "referer",
-          ].includes(lowerKey) ||
-          lowerKey.startsWith("sec-") ||
-          valueString === undefined
+          ].includes(lowerKey) || lowerKey.startsWith("sec-");
+        // Skip host-specific and browser security headers
+        if (
+          lowerKey === "x-include-client-headers" ||
+          valueString === undefined ||
+          (omitClientHeaders && isClientHeader)
         ) {
           return [];
         }
@@ -338,8 +341,11 @@ const proxyRoute: http.RequestListener = (req, res) => {
 
     const options = {
       method: req.method,
-      headers: filteredHeaders,
+      headers: { ...filteredHeaders, host: proxyUrl.host },
     };
+
+    console.log("🔍 proxyUrl", proxyUrl.toString());
+    console.log("🔍  proxy options", options);
 
     // Forward the request to the proxy resource and pipe it back to the original response
     const proxyReq = https.request(

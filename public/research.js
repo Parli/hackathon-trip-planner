@@ -1,4 +1,18 @@
-import "/search.js";
+import { getSearch, getHistoricWeather, getWebSearch } from "/search.js";
+
+// `ai` Vercel AI SDK https://ai-sdk.dev/docs/
+import {
+  generateObject,
+  generateText,
+  createProviderRegistry,
+  jsonSchema,
+} from "https://cdn.jsdelivr.net/npm/ai@4.3.15/+esm";
+// `@ai-sdk/openai` Vercel AI SDK OpenAI Provider https://ai-sdk.dev/providers/ai-sdk-providers/openai
+import { createOpenAI } from "https://cdn.jsdelivr.net/npm/@ai-sdk/openai@1.3.22/+esm";
+// `@ai-sdk/anthropic` Vercel AI SDK Anthropic Provider https://ai-sdk.dev/providers/ai-sdk-providers/anthropic
+import { createAnthropic } from "https://cdn.jsdelivr.net/npm/@ai-sdk/anthropic@1.2.11/+esm";
+// `@ai-sdk/google` Vercel AI SDK Google Provider https://ai-sdk.dev/providers/ai-sdk-providers/google
+import { createGoogleGenerativeAI } from "https://cdn.jsdelivr.net/npm/@ai-sdk/google@1.2.18/+esm";
 
 /**
  * https://www.npmjs.com/package/@mozilla/readability
@@ -18,11 +32,42 @@ import "/search.js";
  * @property {string} siteName name of the site
  * @property {string} textContent text content of the article, with all the HTML tags removed
  */
-import { Readability } from "https://cdn.jsdelivr.net/npm/@mozilla/readability@0.6.0/+esm";
+import {
+  Readability,
+  isProbablyReaderable,
+} from "https://cdn.jsdelivr.net/npm/@mozilla/readability@0.6.0/+esm";
+
+// Shared config
+const defaultProvider = "anthropic";
+
+// Mapping of models for each provider
+const modelMap = {
+  openai: "gpt-4.1",
+  anthropic: "claude-3-7-sonnet-latest",
+  google: "gemini-2.5-flash-preview-04-17",
+};
+
+const defaultModel = modelMap[defaultProvider];
+
+// Initialize providers with the proxy url and server side env var interpolation strings
+// https://ai-sdk.dev/docs/reference/ai-sdk-core/provider-registry
+const registry = createProviderRegistry({
+  openai: createOpenAI({
+    baseURL: "/api/proxy/https://api.openai.com/v1",
+    apiKey: "${OPENAI_API_KEY}",
+  }),
+  anthropic: createAnthropic({
+    baseURL: "/api/proxy/https://api.anthropic.com/v1",
+    apiKey: "${ANTHROPIC_API_KEY}",
+  }),
+  google: createGoogleGenerativeAI({
+    baseURL: "/api/proxy/https://generativelanguage.googleapis.com/v1beta",
+    apiKey: "${GEMINI_API_KEY}",
+  }),
+});
 
 // Canonical JSON Schema description for trip itinerary artiface used to produce the page UI
 const tripSchema = {
-  $schema: "http://json-schema.org/draft-07/schema#",
   title: "Trip Schema",
   description:
     "Schema for planning a detailed trip with destinations, accommodations, activities, and transportation",
@@ -153,6 +198,13 @@ const tripSchema = {
         description: {
           type: "string",
           description: "Short description about the place",
+        },
+        photos: {
+          type: "array",
+          items: {
+            type: "string",
+          },
+          description: "URLs of pictures of the place",
         },
         coordinates: {
           type: "object",
@@ -407,13 +459,6 @@ const tripSchema = {
             type: "string",
             description: "Description of the stay",
           },
-          photos: {
-            type: "array",
-            items: {
-              type: "string",
-            },
-            description: "URLs of pictures of the place",
-          },
           arrival_time: {
             type: ["number", "null"],
             description:
@@ -452,7 +497,6 @@ const tripSchema = {
         required: [
           "destination",
           "description",
-          "photos",
           "options",
           "day_plans",
           "weather",
@@ -466,10 +510,68 @@ const tripSchema = {
 /**
  * Generates a set of search queries that would be able to find data to fulfill the user message request
  * @param {string} message User message
- * @returns {Array.<string>} Search query strings to fulfill the user request
+ * @returns {Promise<Array.<string>>} Search query strings to fulfill the user request
  */
-async function getQueryPlan() {
-  // Prompt AI SDK to get search queries that are likely to find content the user needs
+async function getQueryPlan(message) {
+  try {
+    // System prompt to guide query generation
+    const systemPrompt = `
+You are an AI assistant specialized in creating effective Google search query plans. Your task is to generate multiple simple search queries that, when combined, will find information to comprehensively answer a user's complex request.
+
+Please follow these steps to create a query plan:
+
+1. Analyze the user request carefully.
+2. Break down the request into main topics and subtopics.
+3. For each identified subtopic, create one or more simple search queries.
+4. Ensure that all aspects of the user's request are covered by the queries.
+
+Guidelines for creating queries:
+- Keep each query simple and focused.
+- Avoid using advanced search operators or complex Boolean logic.
+- Use unambiguous keywords that are likely to appear in relevant articles.
+- Use enough keywords to find relavant results, but not so many that it becomes too long tail.
+- Consider including alternative terms or phrasings to broaden the search.
+- Break down the main topics and subtopics.
+- Use potential alternative terms for key concepts.
+- Consider the search intent behind each subtopic.
+- Queries should be diverse to avoid getting duplicate results.
+- Queries should be written in keyword form.
+- Queries should expand on the original input for related or sub topics that would help answer the user request
+
+Output Format:
+Provide the search queries as a JSON array of strings, where each string is a single search query. Maximum of 8 queries.
+For example:
+
+User Example: "South east asia chill island vibes, affordable, relaxing, nature with comfort"
+
+\`\`\`json
+[
+  "best island destinations southeast asia",
+  "affordable island vacations southeast asia",
+  "relaxing beach islands southeast asia",
+  "southeast asia islands with natural beauty",
+  "comfortable accommodation island southeast asia",
+  "thailand indonesia philippines best islands",
+  "boutique resorts southeast asia islands",
+  "southeast asia islands good amenities",
+]
+\`\`\`
+`;
+
+    const { object } = await generateObject({
+      model: registry.languageModel(`${defaultProvider}:${defaultModel}`),
+      output: "array",
+      system: systemPrompt,
+      prompt: message,
+      schema: jsonSchema({
+        type: "string",
+      }),
+    });
+    return object;
+  } catch (error) {
+    console.error("Error in getQueryPlan:", error);
+    throw error;
+  }
 }
 
 /**
@@ -479,6 +581,7 @@ async function getQueryPlan() {
  * @property {string} siteName
  * @property {string} title
  * @property {string} content
+ * @property {boolean} success
  */
 
 /**
@@ -486,48 +589,541 @@ async function getQueryPlan() {
  * The content may be filtered for main content
  * The content may or may not contain HTML
  * @param {string} url URL of the page to retrieve content from
- * @returns {PageContent} Main content pulled from the web page
+ * @returns {Promise<PageContent>} Main content pulled from the web page
  */
 async function getPageContent(url) {
-  // Hit Proxy API endpoint to get web page content
-  // Return main text content using readability algorithm
+  try {
+    // Use the proxy endpoint to fetch the web page
+    const proxyUrl = `/api/proxy/${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl, {
+      method: "GET",
+      headers: { "x-include-client-headers": "true" },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch page: ${response.status} ${response.statusText}`
+      );
+    }
+
+    // Get the HTML content
+    const html = await response.text();
+
+    // Create a DOM parser
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    // Use Readability to extract the main content
+    // https://www.npmjs.com/package/@mozilla/readability
+    const reader = new Readability(doc);
+    const article = reader.parse();
+    // If article couldn't be parsed, return the raw HTML
+
+    if (!article || !isProbablyReaderable(doc)) {
+      return {
+        url,
+        siteName:
+          doc.querySelector('meta[property="og:site_name"]')?.content ||
+          new URL(url).hostname,
+        title: doc.title || "Unknown Title",
+        content: [...doc.querySelectorAll("h1,h2,h3,h4,h5,h6,p")]
+          .map((el) => el.textContent)
+          .filter((text) => text)
+          .join("\n")
+          .slice(0, 10000),
+        success: true,
+      };
+    }
+
+    // Return the parsed article content
+    return {
+      url,
+      siteName: article.siteName || new URL(url).hostname,
+      title: article.title,
+      content: article.textContent,
+      success: true,
+    };
+  } catch (error) {
+    console.error("Error in getPageContent:", error);
+    return {
+      url,
+      siteName: new URL(url).hostname,
+      title: `Get Page Content Error ${url}: ${error.message}`,
+      content: "",
+      success: false,
+    };
+  }
 }
 
 /**
  * A search result
  * @typedef {Object} PageSummary
  * @property {PageContent} page
- * @property {string} summary
+ * @property {string|null} summary
  */
 
 /**
  * Given a user input request, search the web and get page results and synthesizes them
  * @param {string} message User message
- * @returns {Array.<PageSummary>} Pages with an accompanying summary of the page data
+ * @returns {Promise<Array.<PageSummary>>} Pages with an accompanying summary of the page data
  *  that contains relavant information to fulfill the user message
  */
 async function getResearch(message) {
-  // Get queries for the user message
-  const queries = await getQueryPlan(message);
-  // Get search results from the queries
-  const searches = await Promise.all(
-    queries.map((query) => getWebSearch(query))
-  );
-  const urls = []; // Extract urls to retrieve and make them unique
-  // Get page content from the search results
-  const pages = await Promise.all(urls.map((url) => getPageContent(url)));
-  // Use LLM to summarize the pages to filter data tailored to the user message
+  try {
+    // Get queries for the user message
+    console.log(`Generating search queries for: ${message}`);
+    const queries = await getQueryPlan(message);
+    console.log(`Generated ${queries.length} queries:`, queries);
+
+    // Get search results from the queries
+    const searches = await Promise.all(
+      queries.map((query) => getWebSearch(query))
+    );
+
+    // Extract unique URLs from the search results
+    const urlSet = new Set();
+    searches.forEach((search) => {
+      // Extract URLs from organic search results
+      if (search.organic) {
+        search.organic.forEach((result) => {
+          if (result.link) urlSet.add(result.link);
+        });
+      }
+
+      // Extract URLs from knowledge graph if present
+      if (search.knowledgeGraph && search.knowledgeGraph.attributes) {
+        const values = Object.values(search.knowledgeGraph.attributes);
+        values.forEach((value) => {
+          if (typeof value === "string" && value.startsWith("http")) {
+            urlSet.add(value);
+          }
+        });
+      }
+    });
+
+    const urls = Array.from(urlSet);
+    console.log(`Fetching content from ${urls.length} unique URLs`);
+
+    // Get page content from the search results
+    const pages = await Promise.all(urls.map((url) => getPageContent(url)));
+
+    // Use AI to summarize each page in context of the user's message
+    const pageSummaries = await Promise.all(
+      pages.flatMap(async (page) => {
+        if (!page.success) {
+          return [];
+        }
+        try {
+          const summaryPrompt = `
+          Provide comprehensive research from this web page content in relation to the user's query: "${message}"
+
+          Page title: ${page.title}
+          Page URL: ${page.url}
+
+          Content:
+          ${page.content}
+
+          You should filter out irrelevant information and provide good structure.
+          Do not leave out relavant information to the user message.
+          `;
+
+          const { text: summary } = await generateText({
+            model: registry.languageModel(`${defaultProvider}:${defaultModel}`),
+            system: summaryPrompt,
+            prompt: message,
+          });
+
+          return {
+            page,
+            summary,
+          };
+        } catch (error) {
+          console.error(`Error summarizing page ${page.url}:`, error);
+          return [];
+        }
+      })
+    );
+
+    return pageSummaries;
+  } catch (error) {
+    console.error("Error in getResearch:", error);
+    throw error;
+  }
 }
 
 /**
- * Given a user input request, search the web and get page results and synthesizes them
- * @param {string} placeName User message
- * @returns {Place} A place object as defined from the trip JSON Schema
+ * Extracts structured place information from web search results and content
+ * @param {string} placeName Name of the place
+ * @param {string} address Optional address or location context
+ * @returns {Promise<Place>} A place object as defined in the trip JSON Schema
  */
-async function getPlaceInfo(placeName, address) {
-  // Do a SERPER web search
-  const search = await getWebSearch(`${placeName} ${address}`);
-  // Extract URLs for the place homepage,
+async function getPlaceInfo(placeName, address = "") {
+  try {
+    // Do a SERPER web search
+    const searchQuery = `${placeName} ${address}`.trim();
+    console.log(`Searching for place info: ${searchQuery}`);
 
-  // Use an LLM to process page data and convert it to the place info for data that is not already structured
+    // Run multiple search types concurrently
+    const [search, placesSearch, mapsSearch, imagesSearch] = await Promise.all([
+      getWebSearch(searchQuery),
+      getSearch(searchQuery, "places"),
+      getSearch(searchQuery, "maps"),
+      getSearch(searchQuery, "images"),
+    ]);
+
+    console.log(
+      `Got results - Web: ${search.organic?.length || 0} results, Places: ${
+        placesSearch.places?.length || 0
+      } results, Maps: ${mapsSearch.places?.length || 0} results, Images: ${
+        imagesSearch.images?.length || 0
+      } results`
+    );
+
+    // Extract data from search results
+    let placeData = {
+      name: placeName,
+      description: "",
+      coordinates: { latitude: 0, longitude: 0 },
+      category: [],
+      photos: [],
+      rating: null,
+      tips: null,
+      budget: null,
+      url: null,
+      physical_level: null,
+      setting: null,
+    };
+
+    // Use images search results for photos
+    if (imagesSearch.images && imagesSearch.images.length > 0) {
+      // Add up to 5 images from dedicated image search results
+      imagesSearch.images.slice(0, 5).forEach((img) => {
+        if (img.imageUrl && !placeData.photos.includes(img.imageUrl)) {
+          placeData.photos.push(img.imageUrl);
+        }
+      });
+    }
+
+    // Try to extract structured data from the knowledge graph if available
+    if (search.knowledgeGraph) {
+      const kg = search.knowledgeGraph;
+      placeData.name = kg.title || placeName;
+      placeData.description = kg.description || "";
+      placeData.category = [kg.type];
+      placeData.rating = kg.rating || null;
+
+      // Add image from knowledge graph if available
+      if (kg.imageUrl) {
+        placeData.photos.push(kg.imageUrl);
+      }
+
+      if (kg.attributes) {
+        if (kg.attributes.Address) {
+          placeData.notes = `Address: ${kg.attributes.Address}`;
+        }
+
+        if (kg.attributes.Hours) {
+          placeData.tips = `Hours: ${kg.attributes.Hours}`;
+        }
+      }
+    }
+
+    // Try to extract more detailed data from places results
+    if (placesSearch.places && placesSearch.places.length > 0) {
+      const place = placesSearch.places[0];
+      placeData.name = place.title || placeData.name;
+      placeData.coordinates = {
+        latitude: place.latitude || 0,
+        longitude: place.longitude || 0,
+      };
+
+      if (place.rating) {
+        placeData.rating = place.rating;
+      }
+
+      if (place.address) {
+        placeData.notes = `Address: ${place.address}`;
+      }
+
+      if (place.category) {
+        placeData.category = [place.category];
+      }
+
+      // Estimate budget based on price level
+      if (place.priceLevel) {
+        const priceText = place.priceLevel.toLowerCase();
+        if (priceText.includes("$")) {
+          const dollarSigns = (priceText.match(/\$/g) || []).length;
+          if (dollarSigns === 1) placeData.budget = "cheap";
+          else if (dollarSigns === 2) placeData.budget = "moderate";
+          else if (dollarSigns >= 3) placeData.budget = "expensive";
+        }
+      }
+    }
+
+    // Extract data from maps results (which often has different/additional information)
+    if (mapsSearch.places && mapsSearch.places.length > 0) {
+      const mapPlace = mapsSearch.places[0];
+
+      // Only override coordinates if we don't have them yet
+      if (!placeData.coordinates.latitude && !placeData.coordinates.longitude) {
+        placeData.coordinates = {
+          latitude: mapPlace.latitude || 0,
+          longitude: mapPlace.longitude || 0,
+        };
+      }
+
+      // Add thumbnail from maps if available
+      if (
+        mapPlace.thumbnailUrl &&
+        !placeData.photos.includes(mapPlace.thumbnailUrl)
+      ) {
+        placeData.photos.push(mapPlace.thumbnailUrl);
+      }
+
+      // If we have types from maps, use them to enhance categories
+      if (mapPlace.types && mapPlace.types.length > 0) {
+        mapPlace.types.forEach((type) => {
+          if (!placeData.category.includes(type)) {
+            placeData.category.push(type);
+          }
+        });
+      }
+
+      // Try to determine physical level and setting from types
+      const types = mapPlace.types || [];
+      if (
+        types.some(
+          (t) =>
+            t.includes("hike") ||
+            t.includes("trail") ||
+            t.includes("mountain") ||
+            t.includes("climb")
+        )
+      ) {
+        placeData.physical_level = "active";
+        placeData.setting = "outdoor";
+      } else if (
+        types.some(
+          (t) => t.includes("walk") || t.includes("tour") || t.includes("park")
+        )
+      ) {
+        placeData.physical_level = "moderate";
+        placeData.setting = types.some((t) => t.includes("park"))
+          ? "outdoor"
+          : "mixed";
+      }
+
+      // Extract opening hours as additional tips
+      if (mapPlace.openingHours) {
+        const hoursText = Object.entries(mapPlace.openingHours)
+          .map(([day, hours]) => `${day}: ${hours}`)
+          .join("\n");
+
+        placeData.tips = placeData.tips
+          ? `${placeData.tips}\n\nHours:\n${hoursText}`
+          : `Hours:\n${hoursText}`;
+      }
+    }
+
+    // Determine basic place type
+    const inferKind = () => {
+      const name = placeData.name.toLowerCase();
+      const category = placeData.category.join(" ").toLowerCase();
+
+      // Check for accommodation
+      if (
+        category.includes("hotel") ||
+        category.includes("motel") ||
+        category.includes("resort") ||
+        category.includes("inn") ||
+        category.includes("hostel") ||
+        name.includes("hotel") ||
+        name.includes("motel") ||
+        name.includes("resort") ||
+        name.includes("stay")
+      ) {
+        return "accommodation";
+      }
+
+      // Check for food
+      if (
+        category.includes("restaurant") ||
+        category.includes("café") ||
+        category.includes("cafe") ||
+        category.includes("bar") ||
+        category.includes("pub") ||
+        category.includes("bakery") ||
+        category.includes("food")
+      ) {
+        return "food";
+      }
+
+      // Check for landmarks
+      if (
+        category.includes("landmark") ||
+        category.includes("monument") ||
+        category.includes("memorial") ||
+        category.includes("statue") ||
+        category.includes("historical") ||
+        category.includes("historic site")
+      ) {
+        return "landmark";
+      }
+
+      // Check for visit
+      if (
+        category.includes("museum") ||
+        category.includes("gallery") ||
+        category.includes("park") ||
+        category.includes("zoo") ||
+        category.includes("garden")
+      ) {
+        return "visit";
+      }
+
+      // Check for experience
+      if (
+        category.includes("tour") ||
+        category.includes("activity") ||
+        category.includes("adventure") ||
+        category.includes("experience")
+      ) {
+        return "experience";
+      }
+
+      // Check for event
+      if (
+        category.includes("event") ||
+        category.includes("concert") ||
+        category.includes("show") ||
+        category.includes("performance") ||
+        category.includes("festival")
+      ) {
+        return "event";
+      }
+
+      // Check for transit
+      if (
+        category.includes("airport") ||
+        category.includes("station") ||
+        category.includes("terminal") ||
+        category.includes("port") ||
+        category.includes("transit")
+      ) {
+        return "transit";
+      }
+
+      // Default to visit
+      return "visit";
+    };
+
+    // Extract top URL if available
+    if (search.organic && search.organic.length > 0) {
+      placeData.url = search.organic[0].link;
+    }
+
+    // Determine the kind of place
+    const kind = inferKind();
+
+    // Create destination object
+    let destination = {
+      name: address || "Unknown location",
+      neighborhood: null,
+      city: null,
+      country: null,
+      region: null,
+    };
+
+    // Try to parse the location information from address
+    if (
+      mapsSearch.places &&
+      mapsSearch.places.length > 0 &&
+      mapsSearch.places[0].address
+    ) {
+      const addressParts = mapsSearch.places[0].address
+        .split(",")
+        .map((part) => part.trim());
+
+      if (addressParts.length >= 3) {
+        destination.city = addressParts[addressParts.length - 3];
+        destination.region = addressParts[addressParts.length - 2];
+        destination.country = addressParts[addressParts.length - 1];
+      } else if (addressParts.length === 2) {
+        destination.city = addressParts[0];
+        destination.country = addressParts[1];
+      }
+
+      destination.name =
+        destination.city ||
+        destination.country ||
+        address ||
+        "Unknown location";
+    }
+
+    // Final place object
+    const place = {
+      kind,
+      name: placeData.name,
+      category: placeData.category.length > 0 ? placeData.category : null,
+      description:
+        placeData.description || `Information about ${placeData.name}`,
+      photos: placeData.photos.length > 0 ? placeData.photos : [],
+      coordinates: placeData.coordinates,
+      destination,
+      notes: placeData.notes,
+      tips: placeData.tips,
+      open_time: null,
+      close_time: null,
+      url: placeData.url,
+      rating: placeData.rating,
+      budget: placeData.budget,
+      cost: null,
+      interest_level: null,
+      physical_level: placeData.physical_level,
+      booking_required: null,
+      booking_deadline: null,
+      availability: null,
+      setting: placeData.setting,
+      time_minutes_allocation: null,
+    };
+
+    return place;
+  } catch (error) {
+    console.error("Error in getPlaceInfo:", error);
+
+    // Return a minimal place object if there's an error
+    return {
+      kind: "visit",
+      name: placeName,
+      category: null,
+      description: `Information about ${placeName}`,
+      photos: [],
+      coordinates: { latitude: 0, longitude: 0 },
+      destination: {
+        name: address || "Unknown location",
+        neighborhood: null,
+        city: null,
+        country: null,
+        region: null,
+      },
+      notes: null,
+      tips: null,
+      open_time: null,
+      close_time: null,
+      url: null,
+      rating: null,
+      budget: null,
+      cost: null,
+      interest_level: null,
+      physical_level: null,
+      booking_required: null,
+      booking_deadline: null,
+      availability: null,
+      setting: null,
+      time_minutes_allocation: null,
+    };
+  }
 }
+
+export { getQueryPlan, getPageContent, getResearch, getPlaceInfo };

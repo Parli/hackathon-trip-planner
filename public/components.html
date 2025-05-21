@@ -5,10 +5,159 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trip Planner: Component Library</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      background-color: #333;
+      color: white;
+      padding: 1rem 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    
+    .component-group {
+      background-color: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .component-group h2 {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .component-examples {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .component-example {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 1rem;
+    }
+    
+    .component-title {
+      font-size: 0.9rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      color: #666;
+    }
+    
+    .full-width {
+      grid-column: 1 / -1;
+    }
+  </style>
 </head>
 
 <body>
-  <!-- Component Library Test Page -->
+  <header>
+    <h1>Trip Planner: Component Library</h1>
+  </header>
+
+  <div class="container">
+    <!-- Icon Components -->
+    <div class="component-group">
+      <h2>Icon Components</h2>
+      
+      <div class="component-examples">
+        <div class="component-example">
+          <div class="component-title">Place Icons</div>
+          <div id="place-icons"></div>
+        </div>
+        
+        <div class="component-example">
+          <div class="component-title">Weather Icons</div>
+          <div id="weather-icons"></div>
+        </div>
+        
+        <div class="component-example">
+          <div class="component-title">Transit Icons</div>
+          <div id="transit-icons"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Item Components -->
+    <div class="component-group">
+      <h2>Item Components</h2>
+      
+      <div class="component-examples">
+        <div class="component-example full-width">
+          <div class="component-title">Weather Item</div>
+          <div id="weather-item"></div>
+        </div>
+        
+        <div class="component-example full-width">
+          <div class="component-title">Plan Item</div>
+          <div id="plan-item"></div>
+        </div>
+        
+        <div class="component-example full-width">
+          <div class="component-title">Transportation Item</div>
+          <div id="transportation-item"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Card Components -->
+    <div class="component-group">
+      <h2>Card Components</h2>
+      
+      <div class="component-examples">
+        <div class="component-example">
+          <div class="component-title">Place Card</div>
+          <div id="place-card"></div>
+        </div>
+        
+        <div class="component-example">
+          <div class="component-title">City Card</div>
+          <div id="city-card"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Complex Components -->
+    <div class="component-group">
+      <h2>Complex Components</h2>
+      
+      <div class="component-examples">
+        <div class="component-example full-width">
+          <div class="component-title">Day Plan</div>
+          <div id="day-plan"></div>
+        </div>
+        
+        <div class="component-example full-width">
+          <div class="component-title">Stay Itinerary</div>
+          <div id="stay-itinerary"></div>
+        </div>
+        
+        <div class="component-example full-width">
+          <div class="component-title">Trip Itinerary</div>
+          <div id="trip-itinerary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 <script type="module">
   import "/components.js";

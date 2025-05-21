@@ -137,6 +137,7 @@ interface Place {
   category: string[] | null // More specifically, what category of the kind of place it is
   // e.g. e.g. Chinese Restaurant, Aerospace Museum, Bed and Breakfast, Historical Landmark, Natural Landmark, etc.
   description: string // Short description about the place
+  photos: string[] // URLs of pictures of the place
   coordinates: { // Exact location of the place
     latitude: number
     longitude: number
@@ -209,8 +210,6 @@ export interface Trip {
   stays: {
     destination: Destination
     description: string
-    // URLs of pictures of the place
-    photos: string[]
     // Time you will arrive to the destination
     arrival_time: Timestamp | null
     // Time you will depart the destination
