@@ -231,13 +231,4 @@ async function getHistoricWeather(coordinates, startDate, endDate) {
   }
 }
 
-/**
- * Helper function for web search - a simpler interface to getSearch for web queries
- * @param {string} query Search query
- * @returns {Promise<SerperResult>} SERPER Search result for web search
- */
-async function getWebSearch(query) {
-  return getSearch(query, "search");
-}
-
-export { getSearch, getHistoricWeather, getWebSearch };
+export { getSearch, getHistoricWeather };

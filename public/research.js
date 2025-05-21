@@ -1,4 +1,4 @@
-import { getSearch, getHistoricWeather, getWebSearch } from "/search.js";
+import { getSearch, getHistoricWeather } from "/search.js";
 
 // `ai` Vercel AI SDK https://ai-sdk.dev/docs/
 import {
@@ -38,16 +38,30 @@ import {
 } from "https://cdn.jsdelivr.net/npm/@mozilla/readability@0.6.0/+esm";
 
 // Shared config
-const defaultProvider = "anthropic";
+const defaultProvider = "google";
+const defaultObjectProvider = "openai";
 
 // Mapping of models for each provider
 const modelMap = {
-  openai: "gpt-4.1",
-  anthropic: "claude-3-7-sonnet-latest",
-  google: "gemini-2.5-flash-preview-04-17",
+  openai: {
+    fast: "gpt-4.1-nano-2025-04-14",
+    standard: "gpt-4.1-mini-2025-04-14",
+    best: "gpt-4.1",
+  },
+  anthropic: {
+    fast: "claude-3-5-haiku-20241022",
+    standard: "claude-3-5-sonnet-20241022",
+    best: "claude-3-7-sonnet-latest",
+  },
+  google: {
+    fast: "gemini-2.0-flash",
+    standard: "gemini-2.5-flash-preview-04-17",
+    best: "gemini-2.5-pro-preview-05-06",
+  },
 };
 
-const defaultModel = modelMap[defaultProvider];
+const defaultModel = `${defaultProvider}:${modelMap[defaultProvider]["standard"]}`;
+const defaultObjectModel = `${defaultObjectProvider}:${modelMap[defaultObjectProvider]["fast"]}`;
 
 // Initialize providers with the proxy url and server side env var interpolation strings
 // https://ai-sdk.dev/docs/reference/ai-sdk-core/provider-registry
@@ -559,7 +573,7 @@ User Example: "South east asia chill island vibes, affordable, relaxing, nature 
 `;
 
     const { object } = await generateObject({
-      model: registry.languageModel(`${defaultProvider}:${defaultModel}`),
+      model: registry.languageModel(defaultObjectModel),
       output: "array",
       system: systemPrompt,
       prompt: message,
@@ -600,10 +614,7 @@ async function getPageContent(url) {
 
     // Use the proxy endpoint to fetch the web page
     const proxyUrl = `/api/proxy/${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl, {
-      method: "GET",
-      headers: { "x-include-client-headers": "true" },
-    });
+    const response = await fetch(proxyUrl);
 
     if (!response.ok) {
       throw new Error(
@@ -786,7 +797,7 @@ async function getResearch(message, { queryCount = 4, resultCount = 5 } = {}) {
 
     // Get search results from the queries
     const searches = await Promise.all(
-      queries.map((query) => getWebSearch(query, { count: resultCount }))
+      queries.map((query) => getSearch(query, "search", { count: resultCount }))
     );
 
     // Extract unique URLs from the search results
@@ -815,45 +826,7 @@ async function getResearch(message, { queryCount = 4, resultCount = 5 } = {}) {
 
     // Get page content from the search results
     const pages = await Promise.all(urls.map((url) => getPageContent(url)));
-
-    // Use AI to summarize each page in context of the user's message
-    const pageSummaries = await Promise.all(
-      pages.flatMap(async (page) => {
-        if (!page.success) {
-          return [];
-        }
-        try {
-          const summaryPrompt = `
-          Provide comprehensive research from this web page content in relation to the user's query: "${message}"
-
-          Page title: ${page.title}
-          Page URL: ${page.url}
-
-          Content:
-          ${page.content}
-
-          You should filter out irrelevant information and provide good structure.
-          Do not leave out relavant information to the user message.
-          `;
-
-          const { text: summary } = await generateText({
-            model: registry.languageModel(`${defaultProvider}:${defaultModel}`),
-            system: summaryPrompt,
-            prompt: message,
-          });
-
-          return {
-            page,
-            summary,
-          };
-        } catch (error) {
-          console.error(`Error summarizing page ${page.url}:`, error);
-          return [];
-        }
-      })
-    );
-
-    return pageSummaries;
+    return pages;
   } catch (error) {
     console.error("Error in getResearch:", error);
     throw error;
@@ -863,13 +836,16 @@ async function getResearch(message, { queryCount = 4, resultCount = 5 } = {}) {
 /**
  * Given a user input request, search the web and get page results and convert them into a stay data structures
  * @param {string} message User message
+ * @param {Object} options
+ * @param {number} options.count Count of places to retrieve
  * @returns {Promise<Array.<Stay>>} Stays relevent to the user message
  *  that contains relavant information to fulfill the user message
  */
-async function getStayResearch(message) {
+async function getStayResearch(message, { count = 6 } = {}) {
   // Get research for finding stays for the user request
-  const research = getResearch(
-    `${message}\n\nContext: User is looking for trip destinations to stay and visit`
+  const research = await getResearch(
+    `${message}\n\nContext: User is looking for trip destinations to stay and visit`,
+    { queryCount: 4, resultCount: 3 }
   );
   const systemPrompt = `
 Using the research provided, extract the best travel destinations that meet the user request.
@@ -879,15 +855,16 @@ Evaluate each location for whether they are appropriate for the user request.
 Your output should provide a sorted array of objects with a destination and description.
 It should be sorted based on relevancy to the user request.
 There should be no duplicates in the output.
+Each destination must be a specific city or town that can be visited.
 
 The description should be short and tailored to the user request highlighting relavant aspects.
 
 Research:
 
-${research}
+${JSON.stringify(research, null, 2)}
   `;
   const { object: stayDestinations } = await generateObject({
-    model: registry.languageModel(`${defaultProvider}:${defaultModel}`),
+    model: registry.languageModel(defaultObjectModel),
     output: "array",
     system: systemPrompt,
     prompt: message,
@@ -900,20 +877,20 @@ ${research}
           title: "Destination Schema",
           type: "object",
           description:
-            "An area-based location as opposed to a specific place, like a city, country, or region",
+            "A city or town destination, some place where it's possible to stay",
           properties: {
             city: {
               type: ["string"],
-              description: "Full city name of the destination, if applicable",
+              description: "Full city name of the destination",
             },
             country: {
               type: ["string"],
-              description:
-                "Full country name of the destination, if applicable",
+              description: "Full country name of the destination",
             },
             region: {
               type: ["string"],
-              description: "Region of the destination, if applicable",
+              description:
+                "Best region description of the destination e.g. Europe, South East Asia, Great Lakes",
             },
           },
           required: ["city", "country", "region"],
@@ -926,12 +903,21 @@ ${research}
       required: ["destination", "description"],
     }),
   });
-  const stays = Promise.all(
-    stayDestinations.map(async (stay) => {
-      return { ...stay, options: await getPlaceResearch(message) };
-    })
-  );
-  return stays;
+  return (
+    await Promise.all(
+      stayDestinations.slice(0, count).map(async (stay) => {
+        try {
+          return {
+            ...stay,
+            options: await getPlaceResearch(message, stay.destination),
+          };
+        } catch (error) {
+          console.error("Error in getStayResearch:", error);
+          return null;
+        }
+      })
+    )
+  ).filter(Boolean);
 }
 
 /**
@@ -948,9 +934,9 @@ async function getPlaceInfo(placeName, address = "") {
 
     // Run multiple search types concurrently
     const [search, mapsSearch, imagesSearch] = await Promise.all([
-      getWebSearch(searchQuery),
-      getSearch(searchQuery, "maps"),
-      getSearch(searchQuery, "images"),
+      getSearch(searchQuery, { type: "search" }),
+      getSearch(searchQuery, { type: "maps" }),
+      getSearch(searchQuery, { type: "images" }),
     ]);
 
     console.log(
@@ -1271,10 +1257,12 @@ async function getPlaceInfo(placeName, address = "") {
  * Given a user input request, search the web and get page results and convert them into a stay data structures
  * @param {string} message User message
  * @param {Destination} destination Location to find places
+ * @param {Object} options
+ * @param {number} options.count Count of places to retrieve
  * @returns {Promise<Array.<Place>>} Stays relevent to the user message
  *  that contains relavant information to fulfill the user message
  */
-async function getPlaceResearch(message, destination) {
+async function getPlaceResearch(message, destination, { count = 3 } = {}) {
   // Get research for finding places for the user request
   const research = await getResearch(
     `Find places in the destination of ${destination.city}, ${destination.country}
@@ -1282,7 +1270,8 @@ async function getPlaceResearch(message, destination) {
 Context: User originally looked for destinations based on this query:
 
 ${message}
-`
+`,
+    { queryCount: 2, resultCount: 3 }
   );
   const systemPrompt = `
 Using the research provided, extract the best places to visit based on the user request.
@@ -1293,15 +1282,16 @@ Your output should provide a sorted array of place objects with an address and d
 It should be sorted based on relevancy to the user request.
 The address should be the most complete you can generate.
 Description should be short and tailored to the context.
-
 There should be no duplicates in the output.
+Places must be specific locations, like a landmark, restaurant, hotel, museum, store, park, etc.
+Do not cities, countries, or regions as places
 
 Research:
 
-${JSON.stringify(research)}
+${JSON.stringify(research, null, 2)}
   `;
   const { object: places } = await generateObject({
-    model: registry.languageModel(`${defaultProvider}:${defaultModel}`),
+    model: registry.languageModel(defaultObjectModel),
     output: "array",
     system: systemPrompt,
     prompt: message,
@@ -1327,15 +1317,22 @@ ${JSON.stringify(research)}
       required: ["address", "description"],
     }),
   });
-  return Promise.all(
-    places.map(async (place) => {
-      return {
-        ...place,
-        ...(await getPlaceInfo(place.name, place.address)),
-        destination,
-      };
-    })
-  );
+  return (
+    await Promise.all(
+      places.slice(0, count).map(async (place) => {
+        try {
+          return {
+            ...place,
+            ...(await getPlaceInfo(place.name, place.address)),
+            destination,
+          };
+        } catch (error) {
+          console.error("Error in getPlaceResearch:", error);
+          return null;
+        }
+      })
+    )
+  ).filter(Boolean);
 }
 
 export {
