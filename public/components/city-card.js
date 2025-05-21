@@ -80,51 +80,33 @@ class CityCard extends HTMLElement {
     const weatherSummary = this._getWeatherSummary();
     const placeholderImage = "/images/no-image.jpg";
 
-    // Get up to 3 images from landmark places in options and day_plans
-    const landmarkImages = [];
-
-    // Function to collect landmark images
-    const collectLandmarkImages = (places) => {
-      if (!places || !places.length) return;
-
-      for (const place of places) {
-        // Only include landmark places with photos
-        if (
-          place.kind === "landmark" &&
-          place.photos &&
-          place.photos.length > 0
-        ) {
-          // Add the first photo from each landmark
-          landmarkImages.push(place.photos[0]);
-
-          // Stop once we have 3 images
-          if (landmarkImages.length >= 3) break;
-        }
-      }
-    };
-
-    // First check options for landmark images
-    if (this._stay.options && this._stay.options.length > 0) {
-      collectLandmarkImages(this._stay.options);
-    }
-
-    // If we don't have 3 images yet, look in day_plans for more landmarks
-    if (
-      landmarkImages.length < 3 &&
-      this._stay.day_plans &&
-      this._stay.day_plans.length > 0
-    ) {
-      // Extract places from day plans
-      const dayPlanPlaces = this._stay.day_plans
-        .filter((plan) => plan.kind === "plan" && plan.location)
-        .map((plan) => plan.location);
-
-      collectLandmarkImages(dayPlanPlaces);
-    }
-
-    // If we still have no images, use a placeholder
-    if (landmarkImages.length === 0) {
-      landmarkImages.push(placeholderImage);
+    // Get up to 3 images
+    const options = this._stay.options ?? [];
+    const plans = this._stay.day_plans ?? [];
+    const places = [
+      ...options,
+      ...plans.filter((plan) => plan.type === "plan"),
+    ];
+    const priority = [
+      "landmark",
+      "visit",
+      "experience",
+      "event",
+      "food",
+      "accomodation",
+      "transit",
+    ].reverse();
+    const sortedPlaces = places.sort((placeA, placeB) => {
+      const priorityA = priority.indexOf(placeA.kind);
+      const priorityB = priority.indexOf(placeB.kind);
+      return priorityB - priorityA;
+    });
+    const topImages = sortedPlaces.slice(0, 3).flatMap((place) => {
+      const photo = place.photos?.[0];
+      return photo ?? [];
+    });
+    if (topImages.length === 0) {
+      topImages.push(placeholderImage);
     }
 
     this.shadowRoot.innerHTML = `
@@ -232,7 +214,7 @@ class CityCard extends HTMLElement {
       </style>
 
       <div class="image-gallery">
-        ${landmarkImages
+        ${topImages
           .map((img) => `<img src="${img}" alt="${cityName}" />`)
           .join("")}
       </div>

@@ -238,6 +238,44 @@ if (cityCardContainer) {
     // Photos are now on places, not on the stay itself
     arrival_time: now + oneDayInSeconds,
     departure_time: now + oneDayInSeconds * 5,
+    options: [
+      {
+        kind: "accomodation",
+        name: "Hotel Eiffel Seine",
+        photos: [
+          "https://cf.bstatic.com/xdata/images/hotel/max1024x768/21048555.jpg?k=e8723ea59bb60039a17bea87247043812e087c1ebcb3c6bf7c85cfb7d15aa696&o=&hp=1",
+        ],
+        destination: {
+          name: "Paris",
+          city: "Paris",
+          country: "France",
+        },
+      },
+      {
+        kind: "food",
+        name: "Chouchou",
+        photos: [
+          "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2d/10/47/e6/retrouvez-a-la-carte.jpg?w=900&h=500&s=1",
+        ],
+        destination: {
+          name: "Paris",
+          city: "Paris",
+          country: "France",
+        },
+      },
+      {
+        kind: "landmark",
+        name: "Eiffel Tower",
+        photos: [
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/960px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg",
+        ],
+        destination: {
+          name: "Paris",
+          city: "Paris",
+          country: "France",
+        },
+      },
+    ],
     weather: [
       {
         condition: "sunny",
