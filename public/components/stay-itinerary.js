@@ -9,6 +9,7 @@
  */
 import "./day-plan.js";
 import "./place-card.js";
+import "./card-carousel.js";
 
 class StayItinerary extends HTMLElement {
   constructor() {
@@ -147,13 +148,9 @@ class StayItinerary extends HTMLElement {
           font-size: 1.4rem;
         }
 
-        .carousel {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 1rem;
+        card-carousel {
+          width: 100%;
           margin-bottom: 1rem;
-          overflow-x: auto;
-          padding: 0.5rem;
         }
 
         .day-plans {
@@ -178,18 +175,11 @@ class StayItinerary extends HTMLElement {
           <span>Things to Do</span>
         </div>
 
-        <div class="carousel" id="activities-carousel">
-          ${
-            activityPlaces.length > 0
-              ? activityPlaces
-                  .map(
-                    (place, index) =>
-                      `<place-card id="activity-${index}"></place-card>`
-                  )
-                  .join("")
-              : '<div class="empty-state">No activities available for this destination yet</div>'
-          }
-        </div>
+        ${
+          activityPlaces.length > 0
+            ? '<card-carousel id="activities-carousel"></card-carousel>'
+            : '<div class="empty-state">No activities available for this destination yet</div>'
+        }
       </div>
 
       <div class="section">
@@ -198,18 +188,11 @@ class StayItinerary extends HTMLElement {
           <span>Food Places</span>
         </div>
 
-        <div class="carousel" id="food-carousel">
-          ${
-            foodPlaces.length > 0
-              ? foodPlaces
-                  .map(
-                    (place, index) =>
-                      `<place-card id="food-${index}"></place-card>`
-                  )
-                  .join("")
-              : '<div class="empty-state">No food places available for this destination yet</div>'
-          }
-        </div>
+        ${
+          foodPlaces.length > 0
+            ? '<card-carousel id="food-carousel"></card-carousel>'
+            : '<div class="empty-state">No food places available for this destination yet</div>'
+        }
       </div>
 
       <div class="day-plans">
@@ -225,20 +208,31 @@ class StayItinerary extends HTMLElement {
       </div>
     `;
 
-    // Set data for place cards after they're created
-    activityPlaces.forEach((place, index) => {
-      const element = this.shadowRoot.getElementById(`activity-${index}`);
-      if (element) {
-        element.place = place;
+    // Create and populate place cards for activities carousel
+    if (activityPlaces.length > 0) {
+      const activitiesCarousel = this.shadowRoot.getElementById('activities-carousel');
+      if (activitiesCarousel) {
+        const activityCards = activityPlaces.map(place => {
+          const card = document.createElement('place-card');
+          card.place = place;
+          return card;
+        });
+        activitiesCarousel.cards = activityCards;
       }
-    });
+    }
 
-    foodPlaces.forEach((place, index) => {
-      const element = this.shadowRoot.getElementById(`food-${index}`);
-      if (element) {
-        element.place = place;
+    // Create and populate place cards for food carousel
+    if (foodPlaces.length > 0) {
+      const foodCarousel = this.shadowRoot.getElementById('food-carousel');
+      if (foodCarousel) {
+        const foodCards = foodPlaces.map(place => {
+          const card = document.createElement('place-card');
+          card.place = place;
+          return card;
+        });
+        foodCarousel.cards = foodCards;
       }
-    });
+    }
 
     // Set data for day plans
     this._dayPlans.forEach((dayPlan, index) => {
