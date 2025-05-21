@@ -67,441 +67,439 @@ const registry = createProviderRegistry({
 });
 
 // Canonical JSON Schema description for trip itinerary artiface used to produce the page UI
+// Travel Date Schema
+const travelDateSchema = {
+  title: "Travel Date Schema",
+  type: "object",
+  description: "A day granularity time for narrowing down potential dates",
+  properties: {
+    year: {
+      type: "integer",
+      description: "Year of travel",
+    },
+    month: {
+      type: "integer",
+      description: "Month of travel (1-12)",
+    },
+    day: {
+      type: "integer",
+      description: "Day of travel (1-31, depending on month)",
+    },
+    flexibility: {
+      type: "string",
+      enum: ["fixed", "somewhat_flexible", "very_flexible"],
+      description: "How flexible the date is",
+    },
+  },
+  required: ["year", "month", "day", "flexibility"],
+};
+
+// Weather Schema
+const weatherSchema = {
+  title: "Weather Schema",
+  type: "object",
+  description: "Data on weather for a specific time",
+  properties: {
+    condition: {
+      type: "string",
+      enum: [
+        "sunny",
+        "partly_cloudy",
+        "cloudy",
+        "foggy",
+        "light_rain",
+        "moderate_rain",
+        "heavy_rain",
+        "stormy",
+        "thunderstorm",
+        "light_snow",
+        "moderate_snow",
+        "heavy_snow",
+        "hail",
+        "windy",
+      ],
+      description: "Weather condition during the time period",
+    },
+    temperature: {
+      type: "number",
+      description: "Temperature (in degrees, presumably Celsius)",
+    },
+    start_time: {
+      type: "number",
+      description: "Start timestamp of the weather condition (in seconds)",
+    },
+    end_time: {
+      type: "number",
+      description: "End timestamp of the weather condition (in seconds)",
+    },
+  },
+  required: ["condition", "temperature", "start_time", "end_time"],
+};
+
+// Destination Schema
+const destinationSchema = {
+  title: "Destination Schema",
+  type: "object",
+  description:
+    "An area-based location as opposed to a specific place, like a city, country, or region",
+  properties: {
+    neighborhood: {
+      type: ["string", "null"],
+      description: "Neighborhood within the destination, if applicable",
+    },
+    city: {
+      type: ["string", "null"],
+      description: "City of the destination, if applicable",
+    },
+    country: {
+      type: ["string", "null"],
+      description: "Country of the destination, if applicable",
+    },
+    region: {
+      type: ["string", "null"],
+      description: "Region of the destination, if applicable",
+    },
+  },
+};
+
+// Coordinates Schema
+const coordinatesSchema = {
+  title: "Coordinates Schema",
+  type: "object",
+  description: "Exact location of a place",
+  properties: {
+    latitude: {
+      type: "number",
+      description: "Latitude coordinate",
+    },
+    longitude: {
+      type: "number",
+      description: "Longitude coordinate",
+    },
+  },
+  required: ["latitude", "longitude"],
+};
+
+// Place Schema
+const placeSchema = {
+  title: "Place Schema",
+  type: "object",
+  description:
+    "A specific location, like a venue, hotel, park, restaurant, etc. that the user may want to visit",
+  properties: {
+    kind: {
+      type: "string",
+      enum: [
+        "accommodation",
+        "food",
+        "landmark",
+        "visit",
+        "experience",
+        "event",
+        "transit",
+      ],
+      description:
+        "The type of place - accommodation (for stays), food (restaurants/markets), landmark (to look at), visit (flexible timing like museums/parks), experience (requires booking but multiple slots available), event (specific time), transit (airports/stations)",
+    },
+    name: {
+      type: "string",
+      description: "Name of the place",
+    },
+    category: {
+      type: ["array", "null"],
+      items: {
+        type: "string",
+      },
+      description:
+        "More specific categories of the kind of place (e.g., Chinese Restaurant, Aerospace Museum, etc.)",
+    },
+    description: {
+      type: "string",
+      description: "Short description about the place",
+    },
+    photos: {
+      type: "array",
+      items: {
+        type: "string",
+      },
+      description: "URLs of pictures of the place",
+    },
+    address: {
+      type: "string",
+      description:
+        "Best available full address of the place including number, street, city, country and zip code if available",
+    },
+    coordinates: coordinatesSchema,
+    destination: destinationSchema,
+    notes: {
+      type: ["string", "null"],
+      description: "Useful information the user should know about the place",
+    },
+    tips: {
+      type: ["string", "null"],
+      description:
+        "Longer explanation of things that could help the user in markdown format",
+    },
+    open_time: {
+      type: ["number", "null"],
+      description: "When the place opens for entry (timestamp in seconds)",
+    },
+    close_time: {
+      type: ["number", "null"],
+      description: "When the place closes or ends (timestamp in seconds)",
+    },
+    url: {
+      type: ["string", "null"],
+      description: "URL for the place",
+    },
+    rating: {
+      type: ["number", "null"],
+      description: "Rating from 0-10",
+    },
+    budget: {
+      type: ["string", "null"],
+      enum: ["free", "cheap", "moderate", "splurge", "expensive"],
+      description: "Relative budget level",
+    },
+    cost: {
+      type: ["number", "null"],
+      description: "Exact cost in USD",
+    },
+    interest_level: {
+      type: ["string", "null"],
+      enum: ["maybe", "interested", "must_do"],
+      description: "Level of interest in visiting this place",
+    },
+    physical_level: {
+      type: ["string", "null"],
+      enum: ["light", "moderate", "active"],
+      description: "Level of physical activity required",
+    },
+    booking_required: {
+      type: ["boolean", "null"],
+      description: "Whether booking is required",
+    },
+    booking_deadline: {
+      type: ["number", "null"],
+      description: "Deadline for booking (timestamp in seconds)",
+    },
+    availability: {
+      type: ["string", "null"],
+      enum: ["low", "medium", "high"],
+      description: "Availability level",
+    },
+    setting: {
+      type: ["string", "null"],
+      enum: ["indoor", "outdoor", "mixed"],
+      description: "Whether the place is indoor, outdoor, or mixed",
+    },
+    time_minutes_allocation: {
+      type: ["number", "null"],
+      description: "Recommended time to spend at this place in minutes",
+    },
+  },
+  required: ["kind", "name", "description", "coordinates", "destination"],
+};
+
+// Schedule Schema
+const scheduleSchema = {
+  title: "Schedule Schema",
+  type: "object",
+  description: "Type to express things that will happen over a specific time",
+  properties: {
+    start_time: {
+      type: "number",
+      description: "Start timestamp (in seconds)",
+    },
+    end_time: {
+      type: "number",
+      description: "End timestamp (in seconds)",
+    },
+  },
+  required: ["start_time", "end_time"],
+};
+
+// Plan Schema
+const planSchema = {
+  title: "Plan Schema",
+  type: "object",
+  description:
+    "A time-sensitive activity associated with a place, like a concert, hotel check-in, or plan to go to a museum",
+  properties: {
+    // Schedule properties
+    start_time: scheduleSchema.properties.start_time,
+    end_time: scheduleSchema.properties.end_time,
+
+    // Plan specific properties
+    kind: {
+      type: "string",
+      enum: ["plan"],
+      description: "Type identifier for a plan",
+    },
+    location: placeSchema,
+  },
+  required: ["start_time", "end_time", "kind", "location"],
+};
+
+// Transportation Schema
+const transportationSchema = {
+  title: "Transportation Schema",
+  type: "object",
+  description: "Plans for getting around",
+  properties: {
+    // Schedule properties
+    start_time: scheduleSchema.properties.start_time,
+    end_time: scheduleSchema.properties.end_time,
+
+    // Transportation specific properties
+    kind: {
+      type: "string",
+      enum: ["transportation"],
+      description: "Type identifier for transportation",
+    },
+    departure: placeSchema,
+    arrival: placeSchema,
+    mode: {
+      type: "string",
+      enum: [
+        "plane",
+        "train",
+        "bus",
+        "car",
+        "taxi",
+        "bike",
+        "boat",
+        "ferry",
+        "subway",
+        "tram",
+        "walk",
+      ],
+      description: "Mode of transportation",
+    },
+  },
+  required: ["start_time", "end_time", "kind", "departure", "arrival", "mode"],
+};
+
+// Timeline Schema
+const timelineSchema = {
+  title: "Timeline Schema",
+  type: "object",
+  description: "Timeline information for the trip",
+  properties: {
+    start_date: travelDateSchema,
+    end_date: travelDateSchema,
+    trip_days: {
+      type: "integer",
+      description: "Number of days you can travel for",
+    },
+  },
+  required: ["start_date", "end_date", "trip_days"],
+};
+
+// Preferences Schema
+const preferencesSchema = {
+  title: "Preferences Schema",
+  type: "object",
+  description:
+    "General preferences and important information for the entire trip",
+  properties: {
+    origin: placeSchema,
+    traveler_count: {
+      type: "integer",
+      description: "Number of people traveling",
+    },
+    pace: {
+      type: "string",
+      enum: ["relaxed", "moderate", "intense"],
+      description: "How much you want to pack into the trip",
+    },
+    morning_type: {
+      type: "string",
+      enum: ["early_bird", "standard_riser", "late_riser"],
+      description: "Prefer doing things earlier or later",
+    },
+    budget_level: {
+      type: "string",
+      enum: ["shoestring", "budget", "value", "premium", "luxury"],
+      description: "How much the traveler wants to spend",
+    },
+    special_needs: {
+      type: "array",
+      items: {
+        type: "string",
+      },
+      description: "Open-ended extra considerations",
+    },
+  },
+  required: [
+    "origin",
+    "traveler_count",
+    "pace",
+    "morning_type",
+    "budget_level",
+    "special_needs",
+  ],
+};
+
+// Stay Schema
+const staySchema = {
+  title: "Stay Schema",
+  type: "object",
+  description: "Travel stay with plans for a destination",
+  properties: {
+    destination: destinationSchema,
+    description: {
+      type: "string",
+      description: "Description of the stay",
+    },
+    arrival_time: {
+      type: ["number", "null"],
+      description:
+        "Time you will arrive at the destination (timestamp in seconds)",
+    },
+    departure_time: {
+      type: ["number", "null"],
+      description:
+        "Time you will depart the destination (timestamp in seconds)",
+    },
+    options: {
+      type: "array",
+      items: placeSchema,
+      description: "Options of things to choose from in the city",
+    },
+    day_plans: {
+      type: "array",
+      items: {
+        oneOf: [transportationSchema, planSchema],
+      },
+      description: "Specific plans that were chosen from options",
+    },
+    weather: {
+      type: "array",
+      items: weatherSchema,
+      description: "Weather events",
+    },
+  },
+  required: ["destination"],
+};
+
+// Main Trip Schema
 const tripSchema = {
   title: "Trip Schema",
   description:
     "Schema for planning a detailed trip with destinations, accommodations, activities, and transportation",
   type: "object",
-  definitions: {
-    TravelDate: {
-      type: "object",
-      description: "A day granularity time for narrowing down potential dates",
-      properties: {
-        year: {
-          type: "integer",
-          description: "Year of travel",
-        },
-        month: {
-          type: "integer",
-          description: "Month of travel (1-12)",
-        },
-        day: {
-          type: "integer",
-          description: "Day of travel (1-31, depending on month)",
-        },
-        flexibility: {
-          type: "string",
-          enum: ["fixed", "somewhat_flexible", "very_flexible"],
-          description: "How flexible the date is",
-        },
-      },
-      required: ["year", "month", "day", "flexibility"],
-    },
-    Weather: {
-      type: "object",
-      description: "Data on weather for a specific time",
-      properties: {
-        condition: {
-          type: "string",
-          enum: [
-            "sunny",
-            "partly_cloudy",
-            "cloudy",
-            "foggy",
-            "light_rain",
-            "moderate_rain",
-            "heavy_rain",
-            "stormy",
-            "thunderstorm",
-            "light_snow",
-            "moderate_snow",
-            "heavy_snow",
-            "hail",
-            "windy",
-          ],
-          description: "Weather condition during the time period",
-        },
-        temperature: {
-          type: "number",
-          description: "Temperature (in degrees, presumably Celsius)",
-        },
-        start_time: {
-          type: "number",
-          description: "Start timestamp of the weather condition (in seconds)",
-        },
-        end_time: {
-          type: "number",
-          description: "End timestamp of the weather condition (in seconds)",
-        },
-      },
-      required: ["condition", "temperature", "start_time", "end_time"],
-    },
-    Destination: {
-      type: "object",
-      description:
-        "An area-based location as opposed to a specific place, like a city, country, or region",
-      properties: {
-        name: {
-          type: "string",
-          description: "Name of the destination",
-        },
-        neighborhood: {
-          type: ["string", "null"],
-          description: "Neighborhood within the destination, if applicable",
-        },
-        city: {
-          type: ["string", "null"],
-          description: "City of the destination, if applicable",
-        },
-        country: {
-          type: ["string", "null"],
-          description: "Country of the destination, if applicable",
-        },
-        region: {
-          type: ["string", "null"],
-          description: "Region of the destination, if applicable",
-        },
-      },
-      required: ["name"],
-    },
-    Place: {
-      type: "object",
-      description:
-        "A specific location, like a venue, hotel, park, restaurant, etc. that the user may want to visit",
-      properties: {
-        kind: {
-          type: "string",
-          enum: [
-            "accommodation",
-            "food",
-            "landmark",
-            "visit",
-            "experience",
-            "event",
-            "transit",
-          ],
-          description:
-            "The type of place - accommodation (for stays), food (restaurants/markets), landmark (to look at), visit (flexible timing like museums/parks), experience (requires booking but multiple slots available), event (specific time), transit (airports/stations)",
-        },
-        name: {
-          type: "string",
-          description: "Name of the place",
-        },
-        category: {
-          type: ["array", "null"],
-          items: {
-            type: "string",
-          },
-          description:
-            "More specific categories of the kind of place (e.g., Chinese Restaurant, Aerospace Museum, etc.)",
-        },
-        description: {
-          type: "string",
-          description: "Short description about the place",
-        },
-        photos: {
-          type: "array",
-          items: {
-            type: "string",
-          },
-          description: "URLs of pictures of the place",
-        },
-        coordinates: {
-          type: "object",
-          description: "Exact location of the place",
-          properties: {
-            latitude: {
-              type: "number",
-              description: "Latitude coordinate",
-            },
-            longitude: {
-              type: "number",
-              description: "Longitude coordinate",
-            },
-          },
-          required: ["latitude", "longitude"],
-        },
-        destination: {
-          $ref: "#/definitions/Destination",
-          description: "Broad location of the place",
-        },
-        notes: {
-          type: ["string", "null"],
-          description:
-            "Useful information the user should know about the place",
-        },
-        tips: {
-          type: ["string", "null"],
-          description:
-            "Longer explanation of things that could help the user in markdown format",
-        },
-        open_time: {
-          type: ["number", "null"],
-          description: "When the place opens for entry (timestamp in seconds)",
-        },
-        close_time: {
-          type: ["number", "null"],
-          description: "When the place closes or ends (timestamp in seconds)",
-        },
-        url: {
-          type: ["string", "null"],
-          description: "URL for the place",
-        },
-        rating: {
-          type: ["number", "null"],
-          description: "Rating from 0-10",
-        },
-        budget: {
-          type: ["string", "null"],
-          enum: ["free", "cheap", "moderate", "splurge", "expensive"],
-          description: "Relative budget level",
-        },
-        cost: {
-          type: ["number", "null"],
-          description: "Exact cost in USD",
-        },
-        interest_level: {
-          type: ["string", "null"],
-          enum: ["maybe", "interested", "must_do"],
-          description: "Level of interest in visiting this place",
-        },
-        physical_level: {
-          type: ["string", "null"],
-          enum: ["light", "moderate", "active"],
-          description: "Level of physical activity required",
-        },
-        booking_required: {
-          type: ["boolean", "null"],
-          description: "Whether booking is required",
-        },
-        booking_deadline: {
-          type: ["number", "null"],
-          description: "Deadline for booking (timestamp in seconds)",
-        },
-        availability: {
-          type: ["string", "null"],
-          enum: ["low", "medium", "high"],
-          description: "Availability level",
-        },
-        setting: {
-          type: ["string", "null"],
-          enum: ["indoor", "outdoor", "mixed"],
-          description: "Whether the place is indoor, outdoor, or mixed",
-        },
-        time_minutes_allocation: {
-          type: ["number", "null"],
-          description: "Recommended time to spend at this place in minutes",
-        },
-      },
-      required: ["kind", "name", "description", "coordinates", "destination"],
-    },
-    Schedule: {
-      type: "object",
-      description:
-        "Type to express things that will happen over a specific time",
-      properties: {
-        start_time: {
-          type: "number",
-          description: "Start timestamp (in seconds)",
-        },
-        end_time: {
-          type: "number",
-          description: "End timestamp (in seconds)",
-        },
-      },
-      required: ["start_time", "end_time"],
-    },
-    Plan: {
-      type: "object",
-      description:
-        "A time-sensitive activity associated with a place, like a concert, hotel check-in, or plan to go to a museum",
-      allOf: [
-        { $ref: "#/definitions/Schedule" },
-        {
-          properties: {
-            kind: {
-              type: "string",
-              enum: ["plan"],
-              description: "Type identifier for a plan",
-            },
-            location: {
-              $ref: "#/definitions/Place",
-              description: "The place where the plan takes place",
-            },
-          },
-          required: ["kind", "location"],
-        },
-      ],
-    },
-    Transportation: {
-      type: "object",
-      description: "Plans for getting around",
-      allOf: [
-        { $ref: "#/definitions/Schedule" },
-        {
-          properties: {
-            kind: {
-              type: "string",
-              enum: ["transportation"],
-              description: "Type identifier for transportation",
-            },
-            departure: {
-              $ref: "#/definitions/Place",
-              description: "Place of departure",
-            },
-            arrival: {
-              $ref: "#/definitions/Place",
-              description: "Place of arrival",
-            },
-            mode: {
-              type: "string",
-              enum: [
-                "plane",
-                "train",
-                "bus",
-                "car",
-                "taxi",
-                "bike",
-                "boat",
-                "ferry",
-                "subway",
-                "tram",
-                "walk",
-              ],
-              description: "Mode of transportation",
-            },
-          },
-          required: ["kind", "departure", "arrival", "mode"],
-        },
-      ],
-    },
-  },
   properties: {
     title: {
       type: "string",
       description: "Name of the trip",
     },
-    timeline: {
-      type: "object",
-      description: "Timeline information for the trip",
-      properties: {
-        start_date: {
-          $ref: "#/definitions/TravelDate",
-          description: "Starting tentative date for travel",
-        },
-        end_date: {
-          $ref: "#/definitions/TravelDate",
-          description: "Ending tentative date for travel",
-        },
-        trip_days: {
-          type: "integer",
-          description: "Number of days you can travel for",
-        },
-      },
-      required: ["start_date", "end_date", "trip_days"],
-    },
-    preferences: {
-      type: "object",
-      description:
-        "General preferences and important information for the entire trip",
-      properties: {
-        origin: {
-          $ref: "#/definitions/Place",
-          description: "Where you're coming from",
-        },
-        traveler_count: {
-          type: "integer",
-          description: "Number of people traveling",
-        },
-        pace: {
-          type: "string",
-          enum: ["relaxed", "moderate", "intense"],
-          description: "How much you want to pack into the trip",
-        },
-        morning_type: {
-          type: "string",
-          enum: ["early_bird", "standard_riser", "late_riser"],
-          description: "Prefer doing things earlier or later",
-        },
-        budget_level: {
-          type: "string",
-          enum: ["shoestring", "budget", "value", "premium", "luxury"],
-          description: "How much the traveler wants to spend",
-        },
-        special_needs: {
-          type: "array",
-          items: {
-            type: "string",
-          },
-          description: "Open-ended extra considerations",
-        },
-      },
-      required: [
-        "origin",
-        "traveler_count",
-        "pace",
-        "morning_type",
-        "budget_level",
-        "special_needs",
-      ],
-    },
+    timeline: timelineSchema,
+    preferences: preferencesSchema,
     stays: {
       type: "array",
       description: "Travel stays with plans for destinations",
-      items: {
-        type: "object",
-        properties: {
-          destination: {
-            $ref: "#/definitions/Destination",
-            description: "The destination of the stay",
-          },
-          description: {
-            type: "string",
-            description: "Description of the stay",
-          },
-          arrival_time: {
-            type: ["number", "null"],
-            description:
-              "Time you will arrive at the destination (timestamp in seconds)",
-          },
-          departure_time: {
-            type: ["number", "null"],
-            description:
-              "Time you will depart the destination (timestamp in seconds)",
-          },
-          options: {
-            type: "array",
-            items: {
-              $ref: "#/definitions/Place",
-            },
-            description: "Options of things to choose from in the city",
-          },
-          day_plans: {
-            type: "array",
-            items: {
-              oneOf: [
-                { $ref: "#/definitions/Transportation" },
-                { $ref: "#/definitions/Plan" },
-              ],
-            },
-            description: "Specific plans that were chosen from options",
-          },
-          weather: {
-            type: "array",
-            items: {
-              $ref: "#/definitions/Weather",
-            },
-            description: "Weather events",
-          },
-        },
-        required: [
-          "destination",
-          "description",
-          "options",
-          "day_plans",
-          "weather",
-        ],
-      },
+      items: staySchema,
     },
   },
   required: ["title", "timeline", "preferences", "stays"],
@@ -510,9 +508,11 @@ const tripSchema = {
 /**
  * Generates a set of search queries that would be able to find data to fulfill the user message request
  * @param {string} message User message
+ * @param {Object} options Query plan options
+ * @param {number} options.count Max count of queries to generate
  * @returns {Promise<Array.<string>>} Search query strings to fulfill the user request
  */
-async function getQueryPlan(message) {
+async function getQueryPlan(message, { count = 8 } = {}) {
   try {
     // System prompt to guide query generation
     const systemPrompt = `
@@ -539,7 +539,7 @@ Guidelines for creating queries:
 - Queries should expand on the original input for related or sub topics that would help answer the user request
 
 Output Format:
-Provide the search queries as a JSON array of strings, where each string is a single search query. Maximum of 8 queries.
+Provide the search queries as a JSON array of strings, where each string is a single search query. Maximum of ${count} queries.
 For example:
 
 User Example: "South east asia chill island vibes, affordable, relaxing, nature with comfort"
@@ -567,7 +567,7 @@ User Example: "South east asia chill island vibes, affordable, relaxing, nature 
         type: "string",
       }),
     });
-    return object;
+    return object.slice(0, count);
   } catch (error) {
     console.error("Error in getQueryPlan:", error);
     throw error;
@@ -771,19 +771,22 @@ async function getRedditContent(url) {
 /**
  * Given a user input request, search the web and get page results and synthesizes them
  * @param {string} message User message
+ * @param {Object} options Research options
+ * @param {number} options.queryCount Research options
+ * @param {number} options.resultCount Research options
  * @returns {Promise<Array.<PageSummary>>} Pages with an accompanying summary of the page data
  *  that contains relavant information to fulfill the user message
  */
-async function getResearch(message) {
+async function getResearch(message, { queryCount = 4, resultCount = 5 } = {}) {
   try {
     // Get queries for the user message
     console.log(`Generating search queries for: ${message}`);
-    const queries = await getQueryPlan(message);
+    const queries = await getQueryPlan(message, { count: queryCount });
     console.log(`Generated ${queries.length} queries:`, queries);
 
     // Get search results from the queries
     const searches = await Promise.all(
-      queries.map((query) => getWebSearch(query))
+      queries.map((query) => getWebSearch(query, { count: resultCount }))
     );
 
     // Extract unique URLs from the search results
@@ -858,6 +861,80 @@ async function getResearch(message) {
 }
 
 /**
+ * Given a user input request, search the web and get page results and convert them into a stay data structures
+ * @param {string} message User message
+ * @returns {Promise<Array.<Stay>>} Stays relevent to the user message
+ *  that contains relavant information to fulfill the user message
+ */
+async function getStayResearch(message) {
+  // Get research for finding stays for the user request
+  const research = getResearch(
+    `${message}\n\nContext: User is looking for trip destinations to stay and visit`
+  );
+  const systemPrompt = `
+Using the research provided, extract the best travel destinations that meet the user request.
+
+Evaluate each location for whether they are appropriate for the user request.
+
+Your output should provide a sorted array of objects with a destination and description.
+It should be sorted based on relevancy to the user request.
+There should be no duplicates in the output.
+
+The description should be short and tailored to the user request highlighting relavant aspects.
+
+Research:
+
+${research}
+  `;
+  const { object: stayDestinations } = await generateObject({
+    model: registry.languageModel(`${defaultProvider}:${defaultModel}`),
+    output: "array",
+    system: systemPrompt,
+    prompt: message,
+    schema: jsonSchema({
+      title: "Destination",
+      type: "object",
+      description: "Destination address and description",
+      properties: {
+        destination: {
+          title: "Destination Schema",
+          type: "object",
+          description:
+            "An area-based location as opposed to a specific place, like a city, country, or region",
+          properties: {
+            city: {
+              type: ["string"],
+              description: "Full city name of the destination, if applicable",
+            },
+            country: {
+              type: ["string"],
+              description:
+                "Full country name of the destination, if applicable",
+            },
+            region: {
+              type: ["string"],
+              description: "Region of the destination, if applicable",
+            },
+          },
+          required: ["city", "country", "region"],
+        },
+        description: {
+          type: "string",
+          description: "Description of the destination",
+        },
+      },
+      required: ["destination", "description"],
+    }),
+  });
+  const stays = Promise.all(
+    stayDestinations.map(async (stay) => {
+      return { ...stay, options: await getPlaceResearch(message) };
+    })
+  );
+  return stays;
+}
+
+/**
  * Extracts structured place information from web search results and content
  * @param {string} placeName Name of the place
  * @param {string} address Optional address or location context
@@ -870,19 +947,16 @@ async function getPlaceInfo(placeName, address = "") {
     console.log(`Searching for place info: ${searchQuery}`);
 
     // Run multiple search types concurrently
-    const [search, placesSearch, mapsSearch, imagesSearch] = await Promise.all([
+    const [search, mapsSearch, imagesSearch] = await Promise.all([
       getWebSearch(searchQuery),
-      getSearch(searchQuery, "places"),
       getSearch(searchQuery, "maps"),
       getSearch(searchQuery, "images"),
     ]);
 
     console.log(
-      `Got results - Web: ${search.organic?.length || 0} results, Places: ${
-        placesSearch.places?.length || 0
-      } results, Maps: ${mapsSearch.places?.length || 0} results, Images: ${
-        imagesSearch.images?.length || 0
-      } results`
+      `Got results - Web: ${search.organic?.length || 0} results, Maps: ${
+        mapsSearch.places?.length || 0
+      } results, Images: ${imagesSearch.images?.length || 0} results`
     );
 
     // Extract data from search results
@@ -930,39 +1004,6 @@ async function getPlaceInfo(placeName, address = "") {
 
         if (kg.attributes.Hours) {
           placeData.tips = `Hours: ${kg.attributes.Hours}`;
-        }
-      }
-    }
-
-    // Try to extract more detailed data from places results
-    if (placesSearch.places && placesSearch.places.length > 0) {
-      const place = placesSearch.places[0];
-      placeData.name = place.title || placeData.name;
-      placeData.coordinates = {
-        latitude: place.latitude || 0,
-        longitude: place.longitude || 0,
-      };
-
-      if (place.rating) {
-        placeData.rating = place.rating;
-      }
-
-      if (place.address) {
-        placeData.notes = `Address: ${place.address}`;
-      }
-
-      if (place.category) {
-        placeData.category = [place.category];
-      }
-
-      // Estimate budget based on price level
-      if (place.priceLevel) {
-        const priceText = place.priceLevel.toLowerCase();
-        if (priceText.includes("$")) {
-          const dollarSigns = (priceText.match(/\$/g) || []).length;
-          if (dollarSigns === 1) placeData.budget = "cheap";
-          else if (dollarSigns === 2) placeData.budget = "moderate";
-          else if (dollarSigns >= 3) placeData.budget = "expensive";
         }
       }
     }
@@ -1159,12 +1200,6 @@ async function getPlaceInfo(placeName, address = "") {
         destination.city = addressParts[0];
         destination.country = addressParts[1];
       }
-
-      destination.name =
-        destination.city ||
-        destination.country ||
-        address ||
-        "Unknown location";
     }
 
     // Final place object
@@ -1232,4 +1267,82 @@ async function getPlaceInfo(placeName, address = "") {
   }
 }
 
-export { getQueryPlan, getPageContent, getResearch, getPlaceInfo };
+/**
+ * Given a user input request, search the web and get page results and convert them into a stay data structures
+ * @param {string} message User message
+ * @param {Destination} destination Location to find places
+ * @returns {Promise<Array.<Place>>} Stays relevent to the user message
+ *  that contains relavant information to fulfill the user message
+ */
+async function getPlaceResearch(message, destination) {
+  // Get research for finding places for the user request
+  const research = await getResearch(
+    `Find places in the destination of ${destination.city}, ${destination.country}
+
+Context: User originally looked for destinations based on this query:
+
+${message}
+`
+  );
+  const systemPrompt = `
+Using the research provided, extract the best places to visit based on the user request.
+
+Evaluate each place for whether they are appropriate for the user request.
+
+Your output should provide a sorted array of place objects with an address and description.
+It should be sorted based on relevancy to the user request.
+The address should be the most complete you can generate.
+Description should be short and tailored to the context.
+
+There should be no duplicates in the output.
+
+Research:
+
+${JSON.stringify(research)}
+  `;
+  const { object: places } = await generateObject({
+    model: registry.languageModel(`${defaultProvider}:${defaultModel}`),
+    output: "array",
+    system: systemPrompt,
+    prompt: message,
+    schema: jsonSchema({
+      title: "Destination",
+      type: "object",
+      description: "Destination address and description",
+      properties: {
+        name: {
+          type: "string",
+          description: "Name of the place",
+        },
+        address: {
+          type: "string",
+          description:
+            "Best available full address of the place including number, street, city, country and zip code if available",
+        },
+        description: {
+          type: "string",
+          description: "Description of the destination",
+        },
+      },
+      required: ["address", "description"],
+    }),
+  });
+  return Promise.all(
+    places.map(async (place) => {
+      return {
+        ...place,
+        ...(await getPlaceInfo(place.name, place.address)),
+        destination,
+      };
+    })
+  );
+}
+
+export {
+  getQueryPlan,
+  getPageContent,
+  getResearch,
+  getStayResearch,
+  getPlaceInfo,
+  getPlaceResearch,
+};

@@ -111,10 +111,12 @@
 /**
  * Searches web results against a query
  * @param {string} query Queries to search against SERPER web search API
- * @param {"search"|"images"|"places"|"maps"} type Type of query to search against SERPER web search API
+ * @param {Object} options Search options
+ * @param {"search"|"images"|"places"|"maps"} options.type Type of query to search against SERPER web search API
+ * @param {number} options.count Number of results to retrieve
  * @returns {Promise<SerperResult>} SERPER Search result object
  */
-async function getSearch(query, type = "search") {
+async function getSearch(query, { type = "search", count = 5 } = {}) {
   try {
     const url = `/api/proxy/https://google.serper.dev/${type}`;
 
@@ -127,7 +129,7 @@ async function getSearch(query, type = "search") {
       body: JSON.stringify({
         q: query,
         gl: "us",
-        num: 5,
+        num: count,
       }),
     });
 

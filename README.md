@@ -138,6 +138,7 @@ interface Place {
   // e.g. e.g. Chinese Restaurant, Aerospace Museum, Bed and Breakfast, Historical Landmark, Natural Landmark, etc.
   description: string // Short description about the place
   photos: string[] // URLs of pictures of the place
+  address: string // Full address of the place including number, street, city, country and zip code if available
   coordinates: { // Exact location of the place
     latitude: number
     longitude: number
@@ -180,10 +181,22 @@ interface Transportation extends Schedule {
   mode: "plane" | "train" | "bus" | "car" | "taxi" | "bike" | "boat" | "ferry" | "subway" | "tram" | "walk"
 }
 
-export interface Trip {
-  // Name of the trip
-  title: string
-  timeline: {
+interface Stay {
+  destination: Destination
+  description: string | null
+  // Time you will arrive to the destination
+  arrival_time: Timestamp | null
+  // Time you will depart the destination
+  departure_time: Timestamp | null
+  // Options of things to choose from in the city
+  options: Place[] | null
+  // Specific plans that were chosen from options
+  day_plans: (Transportation | Plan)[] | null
+  // Weather events
+  weather: Weather[] | null
+}
+
+interface Timeline {
     // Starting tentative date for travel
     start_date: TravelDate
     // Ending tentative date for travel
@@ -191,36 +204,30 @@ export interface Trip {
     // Number of days you can travel for
     trip_days: number
   }
+
+interface Preferences {
+  // Where you're coming from
+  origin: Place
+  // Number of people traveling
+  traveler_count: number,
+  // How much you want to pack into the trip
+  pace: "relaxed" | "moderate" | "intense"
+  // Prefer doing things earlier or later
+  morning_type: "early_bird" | "standard_riser" | "late_riser"
+  // How much the traveler wants to spend
+  budget_level: "shoestring" | "budget" | "value" | "premium" | "luxury"
+  // Open ended extra considerations
+  special_needs: string[]
+}
+
+export interface Trip {
+  // Name of the trip
+  title: string
+  timeline: Timeline
   // General preferences and important information for the entire trip
-  preferences: {
-    // Where you're coming from
-    origin: Place
-    // Number of people traveling
-    traveler_count: number,
-    // How much you want to pack into the trip
-    pace: "relaxed" | "moderate" | "intense"
-    // Prefer doing things earlier or later
-    morning_type: "early_bird" | "standard_riser" | "late_riser"
-    // How much the traveler wants to spend
-    budget_level: "shoestring" | "budget" | "value" | "premium" | "luxury"
-    // Open ended extra considerations
-    special_needs: string[]
-  }
+  preferences: Preferences
   // Travel stays with plans for the destinations
-  stays: {
-    destination: Destination
-    description: string
-    // Time you will arrive to the destination
-    arrival_time: Timestamp | null
-    // Time you will depart the destination
-    departure_time: Timestamp | null
-    // Options of things to choose from in the city
-    options: Place[]
-    // Specific plans that were chosen from options
-    day_plans: (Transportation | Plan)[]
-    // Weather events
-    weather: Weather[]
-  }[]
+  stays: Stay[]
 }
 ```
 
