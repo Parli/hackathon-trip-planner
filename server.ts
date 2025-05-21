@@ -211,6 +211,9 @@ const server = http.createServer(
     } else if (req.url?.startsWith("/api/store/")) {
       // Handle storage requests
       storeRoute(req, res);
+    } else if (req.url?.startsWith("/api/save/")) {
+      // Handle save requests
+      saveRoute(req, res);
     } else if (req.url?.startsWith("/api/proxy/")) {
       // Handle proxy requests
       proxyRoute(req, res);
@@ -288,6 +291,86 @@ const storeRoute: http.RequestListener = (req, res) => {
     });
     return;
   }
+};
+
+/**
+ * `GET /save/[id]`
+ * Gets an arbitrary `plain/text` string stored by its user-provided `id`.
+ *
+ * `PUT /save/[id]`
+ * Stores an arbitrary `plain/text` body string with the user-provided `id`. Returns the provided `id`.
+ *
+ * `POST /save/`
+ * Stores an arbitrary `plain/text` body string and returns a randomly generated `id`.
+ */
+const saveRoute: http.RequestListener = (req, res) => {
+  if (req.method === "GET") {
+    const id = req.url?.replace("/api/save/", "");
+    const storageId = id ? `id:${id}` : null;
+    if (storageId && storage[storageId] !== undefined) {
+      // Return the data for the storage id from the in memory storage copy
+      res.writeHead(200);
+      res.end(storage[storageId].body);
+    } else {
+      // Return not found if id is not found
+      res.writeHead(404);
+      res.end("404 Not Found");
+    }
+    return;
+  }
+  if (req.method === "PUT" || req.method === "POST") {
+    const pathId = req.url?.replace("/api/save/", "");
+    if (req.method === "PUT" && !pathId) {
+      res.writeHead(404);
+      res.end("404 Not Found");
+      return;
+    }
+    if (req.method === "POST" && pathId) {
+      res.writeHead(405);
+      res.end("405 Method Not Allowed");
+      return;
+    }
+    const id =
+      req.method === "PUT" ? pathId : crypto.randomBytes(16).toString("hex");
+    const storageId = `id:${id}`;
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
+
+    req.on("end", () => {
+      // Disallow overly large storage requests to prevent abuse
+      if (body.length > 100000) {
+        res.writeHead(413, { "Content-Type": "text/plain" });
+        res.end("Error content too large");
+        return;
+      }
+      try {
+        // Store modified and created dates for future storage management
+        const modified = Date.now();
+        const created = storage[storageId]?.created ?? modified;
+        storage[storageId] = {
+          created,
+          modified,
+          body,
+        };
+        // Save to file after updating storage
+        saveStorage();
+        res.writeHead(created === modified ? 201 : 200);
+        res.end(id);
+      } catch (error) {
+        console.error("Error processing save request:", error);
+        res.writeHead(500);
+        res.end("Save request error");
+      }
+      return;
+    });
+    return;
+  }
+
+  // Only GET, PUT, and POST methods are supported
+  res.writeHead(405);
+  res.end("Method Not Allowed");
 };
 
 /**

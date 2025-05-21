@@ -235,7 +235,9 @@ export interface Trip {
 
 This project has a server with api endpoints to assist in prototyping.
 
-### Persistant Storage
+### Persistent Storage
+
+#### Store API
 
 `GET /api/store/[hash]`
 
@@ -244,6 +246,20 @@ Gets an arbitrary `plain/text` string stored by its url safe base64 encoded MD5 
 `POST /api/store/`
 
 Stores an arbitrary `plain/text` body string and returns the MD5 `hash` as a url safe base64 encoded plain text string.
+
+#### Save API
+
+`GET /api/save/[id]`
+
+Gets an arbitrary `plain/text` string stored by its user-provided `id`.
+
+`PUT /api/save/[id]`
+
+Stores an arbitrary `plain/text` body string with the user-provided `id`. Returns the provided `id`.
+
+`POST /api/save/`
+
+Stores an arbitrary `plain/text` body string and returns a randomly generated `id`.
 
 ### External Service Proxy
 
