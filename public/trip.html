@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Node Simple Server: AI Prototype Example</title>
+</head>
+
+<body>
+  <h1>AI Prototype Example</h1>
+  <form id="search">
+    <select id="provider">
+      <option value="anthropic">Anthropic Claude</option>
+      <option value="openai">OpenAI GPT</option>
+      <option value="google">Google Gemini</option>
+    </select>
+    <input id="query" type="text" />
+  </form>
+  <div id="answer"></div>
+  <button id="share">Share</button>
+</body>
+<script type="module">
+  import "/main.js";
+</script>
+
+</html>
