@@ -11,6 +11,7 @@ import {
 import "./components/place-card.js";
 import "./components/city-card.js";
 import "./components/stay-itinerary.js";
+import "./components/card-carousel.js";
 
 // Initialize all tabs and their functionality
 
@@ -389,21 +390,25 @@ placeResearchForm.button.addEventListener("click", async () => {
         </div>
       `;
     } else {
-      const placesContainer = document.createElement("div");
-      placesContainer.style.display = "grid";
-      placesContainer.style.gridTemplateColumns =
-        "repeat(auto-fill, minmax(300px, 1fr))";
-      placesContainer.style.gap = "1rem";
-      placesContainer.style.marginTop = "1rem";
+      // Create a heading
+      const heading = document.createElement("h4");
+      heading.textContent = `Places in ${city}, ${country}`;
+      heading.style.marginBottom = "1rem";
+      placeResearchForm.resultContent.appendChild(heading);
 
-      // Add each place as a place-card
-      places.forEach((place, index) => {
+      // Create a card carousel for the places
+      const carousel = document.createElement("card-carousel");
+      
+      // Create place cards and add them to the carousel
+      const placeCards = places.map(place => {
         const placeCard = document.createElement("place-card");
+        // Store the full place data on the element
         placeCard.place = place;
-        placesContainer.appendChild(placeCard);
+        return placeCard;
       });
-
-      placeResearchForm.resultContent.appendChild(placesContainer);
+      
+      carousel.cards = placeCards;
+      placeResearchForm.resultContent.appendChild(carousel);
     }
 
     // Show results
@@ -454,18 +459,29 @@ stayResearchForm.button.addEventListener("click", async () => {
         </div>
       `;
     } else {
-      // Container for city cards
-      const cityCardsContainer = document.createElement("div");
-      cityCardsContainer.style.display = "grid";
-      cityCardsContainer.style.gridTemplateColumns =
-        "repeat(auto-fill, minmax(300px, 1fr))";
-      cityCardsContainer.style.gap = "1rem";
-      cityCardsContainer.style.marginBottom = "2rem";
+      // Create a heading
+      const heading = document.createElement("h4");
+      heading.textContent = "Suggested Destinations";
+      heading.style.marginBottom = "1rem";
+      stayResearchForm.resultContent.appendChild(heading);
 
-      // Add each stay as a city-card
-      stays.forEach((stay, index) => {
+      // Create a card carousel for destinations
+      const carousel = document.createElement("card-carousel");
+      
+      // Create city cards and add them to the carousel
+      const cityCards = stays.map((stay, index) => {
         const cityCard = document.createElement("city-card");
-        cityCard.stay = stay;
+        
+        // Store the complete stay data on the card
+        cityCard.stay = {
+          destination: stay.destination,
+          description: stay.description,
+          options: stay.options || [],
+          arrival_time: Date.now() / 1000 + 86400, // Example arrival time (tomorrow)
+          departure_time: Date.now() / 1000 + 86400 * 7, // Example departure time (in a week)
+          weather: stay.weather || []
+        };
+        
         cityCard.style.cursor = "pointer";
         cityCard.setAttribute("data-index", index);
 
@@ -482,11 +498,13 @@ stayResearchForm.button.addEventListener("click", async () => {
             detailsEl.style.display = "block";
           }
         });
-
-        cityCardsContainer.appendChild(cityCard);
+        
+        return cityCard;
       });
-
-      stayResearchForm.resultContent.appendChild(cityCardsContainer);
+      
+      carousel.cards = cityCards;
+      carousel.style.marginBottom = "2rem";
+      stayResearchForm.resultContent.appendChild(carousel);
 
       // Add detailed itineraries (hidden by default)
       const itinerariesContainer = document.createElement("div");

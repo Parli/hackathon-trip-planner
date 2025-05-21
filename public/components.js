@@ -10,6 +10,7 @@ import "/components/transportation-item.js";
 import "/components/day-plan.js";
 import "/components/stay-itinerary.js";
 import "/components/trip-itinerary.js";
+import "/components/card-carousel.js";
 
 // Current timestamp (for demo purposes)
 const now = Math.floor(Date.now() / 1000);
@@ -556,6 +557,86 @@ if (stayItineraryContainer) {
     ],
   };
   stayItineraryContainer.appendChild(stayItinerary);
+}
+
+// Card Carousel
+const cardCarouselContainer = document.getElementById("card-carousel");
+if (cardCarouselContainer) {
+  const cardCarousel = document.createElement("card-carousel");
+  
+  // Create place cards for the carousel
+  const places = [
+    {
+      kind: "landmark",
+      name: "Eiffel Tower",
+      category: ["Historical Landmark", "Tourist Attraction"],
+      description: "Iconic iron lattice tower on the Champ de Mars in Paris, France.",
+      photos: ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQAIzAesW6PZwoCTvak2e4GEmlso56VCYv27A&s"],
+      coordinates: { latitude: 48.8584, longitude: 2.2945 },
+      destination: { name: "Paris", city: "Paris", country: "France" },
+      rating: 9.2,
+      budget: "moderate",
+      interest_level: "interested",
+    },
+    {
+      kind: "visit",
+      name: "Louvre Museum",
+      category: ["Museum", "Art Gallery"],
+      description: "World-famous art museum housing thousands of works of art including the Mona Lisa.",
+      photos: ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1FKV2I_7_MfOmqXFUsnuftQy1FoftQ-zdGA&s"],
+      coordinates: { latitude: 48.8606, longitude: 2.3376 },
+      destination: { name: "Paris", city: "Paris", country: "France" },
+      rating: 9.5,
+      budget: "moderate",
+      interest_level: "very_interested",
+    },
+    {
+      kind: "food",
+      name: "Café de Flore",
+      category: ["Café", "Restaurant"],
+      description: "Historic café in the heart of Saint-Germain-des-Prés, known for famous literary patrons.",
+      photos: ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQzh8SXVvnaYDQFrLTdH7lzFwcdXQtb7_nH3g&s"],
+      coordinates: { latitude: 48.8535, longitude: 2.3333 },
+      destination: { name: "Paris", city: "Paris", country: "France" },
+      rating: 8.5,
+      budget: "splurge",
+      interest_level: "somewhat_interested",
+    },
+    {
+      kind: "landmark",
+      name: "Notre-Dame Cathedral",
+      category: ["Religious Site", "Historical Site"],
+      description: "Medieval Catholic cathedral on the Île de la Cité in Paris.",
+      photos: ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHWy6XFrwQMT_ZmNRjVdsPmvRBgG5XIVhRXA&s"],
+      coordinates: { latitude: 48.853, longitude: 2.3499 },
+      destination: { name: "Paris", city: "Paris", country: "France" },
+      rating: 9.0,
+      budget: "free",
+      interest_level: "interested",
+    },
+    {
+      kind: "landmark",
+      name: "Colosseum",
+      category: ["Historical Site", "Ancient Ruin"],
+      description: "Ancient Roman amphitheater in the center of Rome, Italy.",
+      photos: ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnQn9_MUxuyr9bpFfRdrr648f7RvB7DPQ0dQ&s"],
+      coordinates: { latitude: 41.8902, longitude: 12.4922 },
+      destination: { name: "Rome", city: "Rome", country: "Italy" },
+      rating: 9.4,
+      budget: "moderate",
+      interest_level: "very_interested",
+    }
+  ];
+  
+  // Create place card elements and add them to carousel
+  const cards = places.map(place => {
+    const placeCard = document.createElement("place-card");
+    placeCard.place = place;
+    return placeCard;
+  });
+  
+  cardCarousel.cards = cards;
+  cardCarouselContainer.appendChild(cardCarousel);
 }
 
 // Trip Itinerary
