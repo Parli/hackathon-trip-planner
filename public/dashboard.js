@@ -1,12 +1,16 @@
 // Dashboard for testing the research and search functionality
-import { getSearch, getHistoricWeather, getWebSearch } from "/search.js";
+import { getSearch, getHistoricWeather } from "/search.js";
 import {
   getQueryPlan,
   getPageContent,
   getResearch,
   getPlaceInfo,
+  getPlaceResearch,
+  getStayResearch,
 } from "/research.js";
 import "./components/place-card.js";
+import "./components/city-card.js";
+import "./components/stay-itinerary.js";
 
 // Initialize all tabs and their functionality
 
@@ -71,7 +75,7 @@ searchForm.button.addEventListener("click", async () => {
     searchForm.loading.style.display = "block";
 
     // Perform search
-    const result = await getSearch(query, searchType);
+    const result = await getSearch(query, { type: searchType });
 
     // Display results
     searchForm.resultJSON.textContent = formatJSON(result);
@@ -266,12 +270,13 @@ researchForm.button.addEventListener("click", async () => {
     let html = "<h4>Research Results:</h4>";
 
     // Display summaries
-    for (const pageSummary of result) {
+    for (const page of result) {
       html += `
         <div style="margin-bottom: 1.5rem; padding: 1rem; border: 1px solid #ddd; border-radius: 4px;">
-          <h5 style="margin-top: 0;">${pageSummary.page.title}</h5>
-          <p style="font-size: 0.9rem; color: #666;">${pageSummary.page.url}</p>
-          <p>${pageSummary.summary}</p>
+          <h5 style="margin-top: 0;">${page.title}</h5>
+          <p style="font-size: 0.9rem; color: #666;">${page.url}</p>
+          <p>length: ${page.content.length}</p>
+          <p>${page.content}</p>
         </div>
       `;
     }
@@ -332,6 +337,196 @@ placeForm.button.addEventListener("click", async () => {
     placeForm.error.style.display = "block";
   } finally {
     placeForm.loading.style.display = "none";
+  }
+});
+
+// Place Research tab functionality
+const placeResearchForm = {
+  query: document.getElementById("place-research-query"),
+  city: document.getElementById("place-research-city"),
+  country: document.getElementById("place-research-country"),
+  button: document.getElementById("place-research-button"),
+  loading: document.getElementById("place-research-loading"),
+  error: document.getElementById("place-research-error"),
+  result: document.getElementById("place-research-result"),
+  resultContent: document.getElementById("place-research-result-content"),
+};
+
+placeResearchForm.button.addEventListener("click", async () => {
+  const query = placeResearchForm.query.value.trim();
+  const city = placeResearchForm.city.value.trim();
+  const country = placeResearchForm.country.value.trim();
+
+  if (!query || !city || !country) {
+    placeResearchForm.error.textContent = "Please enter all required fields";
+    placeResearchForm.error.style.display = "block";
+    return;
+  }
+
+  try {
+    // Hide previous results and show loading
+    placeResearchForm.result.style.display = "none";
+    placeResearchForm.error.style.display = "none";
+    placeResearchForm.loading.style.display = "block";
+
+    // Set up the destination object
+    const destination = {
+      city: city,
+      country: country,
+      region: "", // Optional, not required for the test
+    };
+
+    // Perform place research
+    const places = await getPlaceResearch(query, destination);
+
+    // Create HTML for place cards
+    placeResearchForm.resultContent.innerHTML = "";
+
+    if (places.length === 0) {
+      placeResearchForm.resultContent.innerHTML = `
+        <div style="padding: 1rem; text-align: center; background-color: #f9f9f9; border-radius: 4px;">
+          No places found matching your criteria.
+        </div>
+      `;
+    } else {
+      const placesContainer = document.createElement("div");
+      placesContainer.style.display = "grid";
+      placesContainer.style.gridTemplateColumns =
+        "repeat(auto-fill, minmax(300px, 1fr))";
+      placesContainer.style.gap = "1rem";
+      placesContainer.style.marginTop = "1rem";
+
+      // Add each place as a place-card
+      places.forEach((place, index) => {
+        const placeCard = document.createElement("place-card");
+        placeCard.place = place;
+        placesContainer.appendChild(placeCard);
+      });
+
+      placeResearchForm.resultContent.appendChild(placesContainer);
+    }
+
+    // Show results
+    placeResearchForm.result.style.display = "block";
+  } catch (error) {
+    placeResearchForm.error.textContent = `Error: ${error.message}`;
+    placeResearchForm.error.style.display = "block";
+  } finally {
+    placeResearchForm.loading.style.display = "none";
+  }
+});
+
+// Stay Research tab functionality
+const stayResearchForm = {
+  query: document.getElementById("stay-research-query"),
+  button: document.getElementById("stay-research-button"),
+  loading: document.getElementById("stay-research-loading"),
+  error: document.getElementById("stay-research-error"),
+  result: document.getElementById("stay-research-result"),
+  resultContent: document.getElementById("stay-research-result-content"),
+};
+
+stayResearchForm.button.addEventListener("click", async () => {
+  const query = stayResearchForm.query.value.trim();
+
+  if (!query) {
+    stayResearchForm.error.textContent = "Please enter a research query";
+    stayResearchForm.error.style.display = "block";
+    return;
+  }
+
+  try {
+    // Hide previous results and show loading
+    stayResearchForm.result.style.display = "none";
+    stayResearchForm.error.style.display = "none";
+    stayResearchForm.loading.style.display = "block";
+
+    // Perform stay research
+    const stays = await getStayResearch(query);
+
+    // Create HTML for stay results
+    stayResearchForm.resultContent.innerHTML = "";
+
+    if (stays.length === 0) {
+      stayResearchForm.resultContent.innerHTML = `
+        <div style="padding: 1rem; text-align: center; background-color: #f9f9f9; border-radius: 4px;">
+          No destinations found matching your criteria.
+        </div>
+      `;
+    } else {
+      // Container for city cards
+      const cityCardsContainer = document.createElement("div");
+      cityCardsContainer.style.display = "grid";
+      cityCardsContainer.style.gridTemplateColumns =
+        "repeat(auto-fill, minmax(300px, 1fr))";
+      cityCardsContainer.style.gap = "1rem";
+      cityCardsContainer.style.marginBottom = "2rem";
+
+      // Add each stay as a city-card
+      stays.forEach((stay, index) => {
+        const cityCard = document.createElement("city-card");
+        cityCard.stay = stay;
+        cityCard.style.cursor = "pointer";
+        cityCard.setAttribute("data-index", index);
+
+        // Add click event to show detailed itinerary
+        cityCard.addEventListener("click", () => {
+          // Hide all detailed itineraries
+          document.querySelectorAll(".stay-details").forEach((el) => {
+            el.style.display = "none";
+          });
+
+          // Show the clicked one
+          const detailsEl = document.getElementById(`stay-details-${index}`);
+          if (detailsEl) {
+            detailsEl.style.display = "block";
+          }
+        });
+
+        cityCardsContainer.appendChild(cityCard);
+      });
+
+      stayResearchForm.resultContent.appendChild(cityCardsContainer);
+
+      // Add detailed itineraries (hidden by default)
+      const itinerariesContainer = document.createElement("div");
+
+      stays.forEach((stay, index) => {
+        const detailsContainer = document.createElement("div");
+        detailsContainer.id = `stay-details-${index}`;
+        detailsContainer.className = "stay-details";
+        detailsContainer.style.display = "none";
+        detailsContainer.style.marginTop = "2rem";
+        detailsContainer.style.padding = "1rem";
+        detailsContainer.style.border = "1px solid #ddd";
+        detailsContainer.style.borderRadius = "8px";
+
+        const backButton = document.createElement("button");
+        backButton.textContent = "← Back to All Destinations";
+        backButton.style.marginBottom = "1rem";
+        backButton.addEventListener("click", () => {
+          detailsContainer.style.display = "none";
+        });
+
+        detailsContainer.appendChild(backButton);
+
+        const stayItinerary = document.createElement("stay-itinerary");
+        stayItinerary.stay = stay;
+
+        detailsContainer.appendChild(stayItinerary);
+        itinerariesContainer.appendChild(detailsContainer);
+      });
+
+      stayResearchForm.resultContent.appendChild(itinerariesContainer);
+    }
+
+    // Show results
+    stayResearchForm.result.style.display = "block";
+  } catch (error) {
+    stayResearchForm.error.textContent = `Error: ${error.message}`;
+    stayResearchForm.error.style.display = "block";
+  } finally {
+    stayResearchForm.loading.style.display = "none";
   }
 });
 
