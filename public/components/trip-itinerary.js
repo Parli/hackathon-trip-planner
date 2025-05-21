@@ -5,12 +5,12 @@
  * After the header it should show a list of <stay-itinerary/> components
  * Takes in the data defined as a trip from the research.js JSON schema object
  */
-import './stay-itinerary.js';
+import "./stay-itinerary.js";
 
 class TripItinerary extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
     this._trip = null;
     this.render();
   }
@@ -25,21 +25,21 @@ class TripItinerary extends HTMLElement {
   }
 
   _formatDate(travelDate) {
-    if (!travelDate) return 'TBD';
-    
+    if (!travelDate) return "TBD";
+
     const { year, month, day } = travelDate;
     const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString(undefined, { 
-      weekday: 'short', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString(undefined, {
+      weekday: "short",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   }
 
   _getDateRange() {
-    if (!this._trip || !this._trip.timeline) return '';
-    
+    if (!this._trip || !this._trip.timeline) return "";
+
     const { start_date, end_date } = this._trip.timeline;
     return `${this._formatDate(start_date)} - ${this._formatDate(end_date)}`;
   }
@@ -60,7 +60,7 @@ class TripItinerary extends HTMLElement {
 
     const { title, stays } = this._trip;
     const dateRange = this._getDateRange();
-    
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -70,32 +70,32 @@ class TripItinerary extends HTMLElement {
           margin: 0 auto;
           padding: 2rem;
         }
-        
+
         .header {
           text-align: center;
           margin-bottom: 3rem;
           padding-bottom: 2rem;
           border-bottom: 3px solid #f0f0f0;
         }
-        
+
         .title {
           font-size: 2.5rem;
           font-weight: bold;
           margin-bottom: 0.5rem;
           color: #333;
         }
-        
+
         .subtitle {
           font-size: 1.2rem;
           color: #666;
         }
-        
+
         .stays {
           display: flex;
           flex-direction: column;
           gap: 3rem;
         }
-        
+
         .separator {
           display: flex;
           align-items: center;
@@ -103,7 +103,7 @@ class TripItinerary extends HTMLElement {
           color: #999;
           font-style: italic;
         }
-        
+
         .separator::before,
         .separator::after {
           content: "";
@@ -111,7 +111,7 @@ class TripItinerary extends HTMLElement {
           border-bottom: 1px dashed #ccc;
           margin: 0 1rem;
         }
-        
+
         .empty-state {
           padding: 3rem;
           text-align: center;
@@ -120,23 +120,32 @@ class TripItinerary extends HTMLElement {
           color: #666;
         }
       </style>
-      
+
       <div class="header">
         <h1 class="title">${title}</h1>
         <div class="subtitle">${dateRange}</div>
       </div>
-      
+
       <div class="stays">
-        ${stays && stays.length > 0 ? 
-          stays.map((stay, index) => `
-            ${index > 0 ? `<div class="separator">Traveling to next destination</div>` : ''}
+        ${
+          stays && stays.length > 0
+            ? stays
+                .map(
+                  (stay, index) => `
+            ${
+              index > 0
+                ? `<div class="separator">Traveling to next destination</div>`
+                : ""
+            }
             <stay-itinerary id="stay-${index}"></stay-itinerary>
-          `).join('') : 
-          '<div class="empty-state">No stays planned for this trip yet</div>'
+          `
+                )
+                .join("")
+            : '<div class="empty-state">No stays planned for this trip yet</div>'
         }
       </div>
     `;
-    
+
     // Set data for stay itineraries after they're created
     if (stays && stays.length > 0) {
       stays.forEach((stay, index) => {
@@ -149,4 +158,4 @@ class TripItinerary extends HTMLElement {
   }
 }
 
-customElements.define('trip-itinerary', TripItinerary);
+customElements.define("trip-itinerary", TripItinerary);

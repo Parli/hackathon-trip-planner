@@ -10,41 +10,41 @@
  */
 class PlaceIcon extends HTMLElement {
   static get observedAttributes() {
-    return ['kind'];
+    return ["kind"];
   }
 
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
     this.render();
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'kind' && oldValue !== newValue) {
+    if (name === "kind" && oldValue !== newValue) {
       this.render();
     }
   }
 
   get kind() {
-    return this.getAttribute('kind') || 'visit';
+    return this.getAttribute("kind") || "visit";
   }
 
   set kind(value) {
-    this.setAttribute('kind', value);
+    this.setAttribute("kind", value);
   }
 
   render() {
     const iconMap = {
-      accommodation: '🏨',
-      food: '🍽️',
-      landmark: '🗿',
-      visit: '🏛️',
-      experience: '🎭',
-      event: '📅',
-      transit: '🚆'
+      accommodation: "🏨",
+      food: "🍽️",
+      landmark: "🗿",
+      visit: "🏛️",
+      experience: "🎭",
+      event: "📅",
+      transit: "🚆",
     };
 
-    const icon = iconMap[this.kind] || '📍';
+    const icon = iconMap[this.kind] || "📍";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -61,4 +61,4 @@ class PlaceIcon extends HTMLElement {
   }
 }
 
-customElements.define('place-icon', PlaceIcon);
+customElements.define("place-icon", PlaceIcon);

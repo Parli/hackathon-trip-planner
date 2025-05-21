@@ -1,15 +1,15 @@
 // Component Library Demo
-import "./components/place-icon.js";
-import "./components/weather-icon.js";
-import "./components/transit-icon.js";
-import "./components/place-card.js";
-import "./components/city-card.js";
-import "./components/weather-item.js";
-import "./components/plan-item.js";
-import "./components/transportation-item.js";
-import "./components/day-plan.js";
-import "./components/stay-itinerary.js";
-import "./components/trip-itinerary.js";
+import "/components/place-icon.js";
+import "/components/weather-icon.js";
+import "/components/transit-icon.js";
+import "/components/place-card.js";
+import "/components/city-card.js";
+import "/components/weather-item.js";
+import "/components/plan-item.js";
+import "/components/transportation-item.js";
+import "/components/day-plan.js";
+import "/components/stay-itinerary.js";
+import "/components/trip-itinerary.js";
 
 // Current timestamp (for demo purposes)
 const now = Math.floor(Date.now() / 1000);

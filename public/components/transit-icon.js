@@ -14,45 +14,45 @@
  */
 class TransitIcon extends HTMLElement {
   static get observedAttributes() {
-    return ['mode'];
+    return ["mode"];
   }
 
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.attachShadow({ mode: "open" });
     this.render();
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'mode' && oldValue !== newValue) {
+    if (name === "mode" && oldValue !== newValue) {
       this.render();
     }
   }
 
   get mode() {
-    return this.getAttribute('mode') || 'walk';
+    return this.getAttribute("mode") || "walk";
   }
 
   set mode(value) {
-    this.setAttribute('mode', value);
+    this.setAttribute("mode", value);
   }
 
   render() {
     const iconMap = {
-      plane: '✈️',
-      train: '🚆',
-      bus: '🚌',
-      car: '🚗',
-      taxi: '🚕',
-      bike: '🚲',
-      boat: '⛵',
-      ferry: '🛥️',
-      subway: '🚇',
-      tram: '🚊',
-      walk: '🚶'
+      plane: "✈️",
+      train: "🚆",
+      bus: "🚌",
+      car: "🚗",
+      taxi: "🚕",
+      bike: "🚲",
+      boat: "⛵",
+      ferry: "🛥️",
+      subway: "🚇",
+      tram: "🚊",
+      walk: "🚶",
     };
 
-    const icon = iconMap[this.mode] || '🚶';
+    const icon = iconMap[this.mode] || "🚶";
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -69,4 +69,4 @@ class TransitIcon extends HTMLElement {
   }
 }
 
-customElements.define('transit-icon', TransitIcon);
+customElements.define("transit-icon", TransitIcon);

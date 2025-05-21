@@ -75,7 +75,7 @@ class CityCard extends HTMLElement {
 
     const { destination, description, arrival_time, departure_time } =
       this._stay;
-    const cityName = destination.city || destination.name;
+    const cityName = destination.city || "";
     const countryName = destination.country || "";
     const weatherSummary = this._getWeatherSummary();
     const placeholderImage = "/images/no-image.jpg";
