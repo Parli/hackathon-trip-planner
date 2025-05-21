@@ -11,6 +11,7 @@
  * Takes in the data defined as Place from the research.js JSON schema object
  */
 import "./place-icon.js";
+import "./image-container.js";
 
 class PlaceCard extends HTMLElement {
   static get observedAttributes() {
@@ -133,7 +134,7 @@ class PlaceCard extends HTMLElement {
     const categoryDisplay = category ? category.join(", ") : "";
     const ratingDisplay = rating ? `${rating}/10` : "No rating";
     const placeholderImage = "/images/no-image.jpg";
-    const imageUrl = photos && photos.length > 0 ? photos[0] : placeholderImage;
+    const imageUrl = photos?.[0] ?? placeholderImage;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -153,11 +154,9 @@ class PlaceCard extends HTMLElement {
           box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        .image {
+        .image-wrapper {
           width: 100%;
-          height: 160px;
-          object-fit: cover;
-          display: block;
+          height: 180px;
         }
 
         .content {
@@ -249,7 +248,9 @@ class PlaceCard extends HTMLElement {
           font-weight: bold;
         }
       </style>
-      <img class="image" src="${imageUrl}" alt="${name}">
+      <div class="image-wrapper">
+        <image-container image="${imageUrl}" alt="${name}"></image-container>
+      </div>
 
       <div class="content">
         <div class="header">
