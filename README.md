@@ -277,6 +277,8 @@ An accompanying `[ENV_VAR]_ACCESS` variable must be defined to allowlist proxy h
 
 If no other route matches, files in the `public` directory will be returned.
 
+The root path `/` will rewrite to `/index.html`. Any path without an extension will rewrite to the same path with `.html` appended to the end.
+
 This ignores the path and hash URL segments.
 
 ## Setup

@@ -466,7 +466,12 @@ const staticRoute: http.RequestListener = (req, res) => {
   const urlPath = req.url?.split("?")[0] ?? "/";
 
   // If URL is '/', serve index.html
-  const filePath = urlPath === "/" ? "/index.html" : urlPath;
+  const filePath =
+    urlPath === "/"
+      ? "/index.html"
+      : path.extname(urlPath) === ""
+      ? `${urlPath}.html`
+      : urlPath;
 
   // Ensure the path doesn't contain directory traversal
   const sanitizedPath = path
