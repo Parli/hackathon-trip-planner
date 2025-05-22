@@ -876,7 +876,7 @@ async function getResearch(message, { queryCount = 4, resultCount = 5 } = {}) {
  * @returns {Promise<Array.<Stay>>} Stays relevent to the user message
  *  that contains relavant information to fulfill the user message
  */
-async function getStayResearch(message, { count = 6 } = {}) {
+async function getStayResearch(message, { count = 3 } = {}) {
   try {
     // Get research for finding stays for the user request
     const research = await getResearch(
