@@ -437,6 +437,7 @@ class StayItinerary extends HTMLElement {
             <span class="section-icon">📅</span>
             <span>Daily Plans</span>
           </h2>
+          <button id="add-day-button" class="add-day-button">+ Add New Day</button>
         </div>
         <div class="day-plans">
           ${(() => {
@@ -448,7 +449,7 @@ class StayItinerary extends HTMLElement {
                       `<day-plan id="day-${index}"></day-plan>`
                   )
                   .join("")
-              : '<div class="empty-state">No daily plans available for this destination yet<br><button id="add-day-button" class="add-day-button">+ Add New Day</button></div>';
+              : '<div class="empty-state">No daily plans available for this destination yet</div>';
           })()}
         </div>
       </div>
@@ -1031,7 +1032,23 @@ class StayItinerary extends HTMLElement {
       this._stay.day_plans = [];
     }
 
-    // Get the trip data
+    // Check if the stay already has arrival and departure times
+    if (this._stay.arrival_time && this._stay.departure_time) {
+      // If stay already has times, just extend the departure time by 24 hours
+      const updatedStay = {
+        ...this._stay,
+        departure_time: this._stay.departure_time + 86400, // Add 24 hours (86400 seconds)
+      };
+
+      // Update the stay in the trip state
+      TripState.update(this._stay.id, updatedStay);
+
+      // Save the updated trip data
+      TripState.saveTrip();
+      return;
+    }
+
+    // Get the trip data for new stays
     const trip = TripState.getTrip();
 
     // Calculate the arrival time for the new day
