@@ -336,81 +336,43 @@ class StayMap extends HTMLElement {
       ).addTo(this._map);
 
       // Get the place object from the location
-      const place = location.item;
+      const place =
+        location.item.kind === "plan" ? location.item.location : location.item;
 
       // Create basic popup content
       let popupContent = `<b>${location.name}</b>`;
+      const dayColorClass = `day${location.dayNum}-color`;
 
-      // Add time and date if it's a planned activity
-      let timeInfo = "";
-      if (location.type === "plan" && location.startTime && location.endTime) {
-        const startDate = new Date(location.startTime * 1000);
-        const endDate = new Date(location.endTime * 1000);
-
-        timeInfo = `
-          <div class="popup-time">
-            <p>Time: ${startDate.toLocaleTimeString()} - ${endDate.toLocaleTimeString()}</p>
-            <p>Date: ${startDate.toLocaleDateString()}</p>
-          </div>
-        `;
-      }
-
-      // Check if the place has photos and include the first one
-      if (place && place.photos && place.photos.length > 0) {
-        const photo = place.photos[0];
-        popupContent = `
-          <div class="popup-content">
+      const photo = place.photos?.[0];
+      popupContent = `
+        <div class="popup-content">
+          ${
+            photo
+              ? `
+              <div class="popup-image-container">
+                <img src="${photo}" alt="${location.name}" class="popup-image">
+              </div>`
+              : ""
+          }
+          <div class="popup-info">
+            <h3>
+              <span>${location.name}</span>
+              ${
+                location.type === "plan" && location.dayNum !== null
+                  ? `<span class="popup-day ${dayColorClass}">Day ${
+                      location.dayNum + 1
+                    }</span>`
+                  : ""
+              }
+            </h3>
             ${
-              photo
-                ? `
-                <div class="popup-image-container">
-                  <img src="${photo}" alt="${location.name}" class="popup-image">
-                </div>`
+              place.description
+                ? `<span class="popup-description">${place.description}</span>`
                 : ""
             }
-            <div class="popup-info">
-              <h3>${location.name}</h3>
-              ${
-                location.type === "plan" && location.dayNum !== null
-                  ? `<p class="popup-day">Day ${location.dayNum + 1}</p>`
-                  : ""
-              }
-              ${
-                place.description
-                  ? `<p class="popup-description">${place.description.substring(
-                      0,
-                      100
-                    )}${place.description.length > 100 ? "..." : ""}</p>`
-                  : ""
-              }
-              ${timeInfo}
-            </div>
           </div>
-        `;
-      } else {
-        // No photo available
-        popupContent = `
-          <div class="popup-content">
-            <div class="popup-info">
-              <h3>${location.name}</h3>
-              ${
-                location.type === "plan" && location.dayNum !== null
-                  ? `<p class="popup-day">Day ${location.dayNum + 1}</p>`
-                  : ""
-              }
-              ${
-                place && place.description
-                  ? `<p class="popup-description">${place.description.substring(
-                      0,
-                      100
-                    )}${place.description.length > 100 ? "..." : ""}</p>`
-                  : ""
-              }
-              ${timeInfo}
-            </div>
-          </div>
-        `;
-      }
+        </div>
+      `;
 
       marker.bindPopup(popupContent, { maxWidth: 300 });
       this._markers.push(marker);
@@ -548,18 +510,6 @@ class StayMap extends HTMLElement {
           font-size: 0.8rem;
         }
 
-        /* Day colors matching the markers */
-
-        .day0-color { background-color: #F05E5E; } /* red */
-        .day1-color { background-color: #4F5AD2; } /* blue */
-        .day2-color { background-color: #882AAD; } /* purple */
-        .day3-color { background-color: #4FC37B; } /* green */
-        .day4-color { background-color: #2AA0AD; } /* teal */
-        .day5-color { background-color: #E99637; } /* orange */
-        .day6-color { background-color: #AD2A86; } /* magenta */
-        .day7-color { background-color: #D0D01F; } /* yellow */
-        .option-color { background-color: #828282; } /* grey */
-
         .legend-title {
           font-weight: bold;
           margin-bottom: 5px;
@@ -608,13 +558,12 @@ class StayMap extends HTMLElement {
 
         .popup-day {
           font-weight: bold;
-          color: #333;
+          color: white;
           font-size: 14px;
-          margin-bottom: 6px;
-          padding: 2px 6px;
+          margin: 0;
+          padding: 1px 5px;
           border-radius: 4px;
           display: inline-block;
-          background-color: #f0f0f0;
         }
 
         .popup-description {
@@ -1062,6 +1011,18 @@ class StayMap extends HTMLElement {
           margin: 0;
           color: #333;
         }
+
+        /* Day colors matching the markers */
+
+        .day0-color { background-color: #F05E5E; } /* red */
+        .day1-color { background-color: #4F5AD2; } /* blue */
+        .day2-color { background-color: #882AAD; } /* purple */
+        .day3-color { background-color: #4FC37B; } /* green */
+        .day4-color { background-color: #2AA0AD; } /* teal */
+        .day5-color { background-color: #E99637; } /* orange */
+        .day6-color { background-color: #AD2A86; } /* magenta */
+        .day7-color { background-color: #D0D01F; } /* yellow */
+        .option-color { background-color: #828282; } /* grey */
       </style>
 
       <div class="map-container">
