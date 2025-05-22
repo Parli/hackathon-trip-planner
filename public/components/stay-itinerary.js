@@ -676,6 +676,9 @@ class StayItinerary extends HTMLElement {
     // Get current options or initialize empty array
     const currentOptions = this._stay.options || [];
 
+    // Determine if this is the first day in the stay
+    const isFirstDay = dayStart === this._stay.arrival_time;
+
     // Separate day plans into those for this day, before this day, and after this day
     const removedDayPlans = [];
     const updatedDayPlans = [];
@@ -688,9 +691,14 @@ class StayItinerary extends HTMLElement {
       } else if (plan.start_time > dayEnd) {
         // Create a copy of the plan to modify
         const updatedPlan = { ...plan };
-        // Decrement time by 1 day (86400 seconds) for plans after the deleted day
-        updatedPlan.start_time -= 86400;
-        updatedPlan.end_time -= 86400;
+
+        // Only shift times if it's not the first day
+        if (!isFirstDay) {
+          // Decrement time by 1 day (86400 seconds) for plans after the deleted day
+          updatedPlan.start_time -= 86400;
+          updatedPlan.end_time -= 86400;
+        }
+
         updatedDayPlans.push(updatedPlan);
       }
     });
@@ -710,8 +718,17 @@ class StayItinerary extends HTMLElement {
       options: updatedOptions,
     };
 
-    if (updatedStay.departure_time) {
-      updatedStay.departure_time -= 86400;
+    // Handle the time adjustments based on whether it's the first day or not
+    if (isFirstDay) {
+      // If deleting the first day, increment arrival time by 1 day
+      if (updatedStay.arrival_time) {
+        updatedStay.arrival_time += 86400;
+      }
+    } else {
+      // If not the first day, decrement departure time by 1 day
+      if (updatedStay.departure_time) {
+        updatedStay.departure_time -= 86400;
+      }
     }
 
     // Reset times to null if there are no more days
@@ -951,7 +968,7 @@ class StayItinerary extends HTMLElement {
     });
 
     // Create a copy of the stay to modify
-    const updatedStay = { ...this._stay };
+    let updatedStay = { ...this._stay };
 
     // If there are plans in the day, move them
     if (dayPlans.length > 0) {
@@ -1016,29 +1033,37 @@ class StayItinerary extends HTMLElement {
 
     // Get the trip data
     const trip = TripState.getTrip();
-    
+
     // Calculate the arrival time for the new day
     let arrivalTime = 0;
-    
+
     // Check if there are other stays with departure times
     if (trip && trip.stays) {
       let latestDepartureTime = 0;
-      
+
       // Find the latest departure time from all other stays
       trip.stays.forEach((stay) => {
         if (stay.id !== this._stay.id && stay.departure_time) {
-          latestDepartureTime = Math.max(latestDepartureTime, stay.departure_time);
+          latestDepartureTime = Math.max(
+            latestDepartureTime,
+            stay.departure_time
+          );
         }
       });
-      
+
       if (latestDepartureTime > 0) {
         // Use the latest departure time from other stays
         arrivalTime = latestDepartureTime;
       }
     }
-    
+
     // If no other stays with departure times, use trip start date
-    if (arrivalTime === 0 && trip && trip.timeline && trip.timeline.start_date) {
+    if (
+      arrivalTime === 0 &&
+      trip &&
+      trip.timeline &&
+      trip.timeline.start_date
+    ) {
       const startDate = new Date(
         trip.timeline.start_date.year,
         trip.timeline.start_date.month - 1, // JavaScript months are 0-indexed
@@ -1047,29 +1072,29 @@ class StayItinerary extends HTMLElement {
       startDate.setHours(0, 0, 0, 0);
       arrivalTime = Math.floor(startDate.getTime() / 1000);
     }
-    
+
     // If no trip start date, fallback to current day
     if (arrivalTime === 0) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       arrivalTime = Math.floor(today.getTime() / 1000);
     }
-    
+
     // Set the departure time to the end of the same day (23:59:59)
     const departureDate = new Date(arrivalTime * 1000);
     departureDate.setHours(23, 59, 59, 999);
     const departureTime = Math.floor(departureDate.getTime() / 1000);
-    
+
     // Create an updated stay object with the new arrival/departure times
     const updatedStay = {
       ...this._stay,
       arrival_time: arrivalTime,
-      departure_time: departureTime
+      departure_time: departureTime,
     };
-    
+
     // Update the stay in the trip state
     TripState.update(this._stay.id, updatedStay);
-    
+
     // Save the updated trip data
     TripState.saveTrip();
   }
