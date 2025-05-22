@@ -76,14 +76,16 @@ class StayMap extends HTMLElement {
     // Add day plans
     if (this._stay.day_plans && this._stay.day_plans.length > 0) {
       // Sort day plans by start time to ensure consistent ordering
-      const sortedPlans = [...this._stay.day_plans].sort((a, b) => a.start_time - b.start_time);
-      
+      const sortedPlans = [...this._stay.day_plans].sort(
+        (a, b) => a.start_time - b.start_time
+      );
+
       // Get arrival time to calculate day index
       const arrivalTime = this._stay.arrival_time || 0;
-      
+
       // Calculate day boundaries - each day is 24 hours (86400 seconds)
       const dayLengthInSeconds = 86400;
-      
+
       sortedPlans.forEach((plan) => {
         if (
           plan.kind === "plan" &&
@@ -97,7 +99,7 @@ class StayMap extends HTMLElement {
           // Day 0 is the arrival day
           const secondsSinceArrival = plan.start_time - arrivalTime;
           const dayNum = Math.floor(secondsSinceArrival / dayLengthInSeconds);
-          
+
           locations.push({
             type: "plan",
             name: plan.location.name,
@@ -427,38 +429,32 @@ class StayMap extends HTMLElement {
     // Base path for marker icons
     const basePath = "/images/map/";
 
-    let iconColor = "blue.png";
+    // Default color for options
+    let iconColor = "grey";
 
-    // For options, use grey
-    if (type === "option") {
-      iconColor = "grey.png";
-    }
     // For plan items, color by day number
-    else if (type === "plan") {
+    if (type === "plan") {
       // Color palette for days
       const dayColors = [
-        "red.png", // Day 0
-        "blue.png", // Day 1
-        "purple.png", // Day 2
-        "green.png", // Day 3
-        "teal.png", // Day 4
-        "orange.png", // Day 5
-        "magenta.png", // Day 6
-        "yellow.png", // Day 7
+        "red", // Day Index 0
+        "blue", // Day Index 1
+        "purple", // Day Index 2
+        "green", // Day Index 3
+        "teal", // Day Index 4
+        "orange", // Day Index 5
+        "magenta", // Day Index 6
+        "yellow", // Day Index 7
       ];
 
       // If we have a valid day number, use it to select color (with cycling if more than 8 days)
       if (dayNum !== null && dayNum !== undefined) {
         const colorIndex = dayNum % dayColors.length;
         iconColor = dayColors[colorIndex];
-      } else {
-        // Default to blue if no day number
-        iconColor = "blue.png";
       }
     }
 
     // Construct full URL for the icon
-    const iconUrl = `${basePath}${iconColor}`;
+    const iconUrl = `${basePath}${iconColor}.png`;
 
     return Leaflet.icon({
       iconUrl: iconUrl,
