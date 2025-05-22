@@ -168,6 +168,12 @@
       overflow-x: auto;
       padding: 10px 0;
     }
+
+    .section-disabled {
+      pointer-events: none;
+      opacity: 0.75;
+      filter: saturate(0) contrast(0.8);
+    }
   </style>
 </head>
 
@@ -208,10 +214,10 @@
       <form id="searchForm">
         <input type="text" id="searchQuery" placeholder="Describe your dream vacation" required>
       </form>
-      <div id="searchResults"></div>
       <div id="cityCarousel" style="display: none;">
         <card-carousel id="stayCarousel"></card-carousel>
       </div>
+      <div id="searchResults"></div>
     </div>
 
     <div class="trip-itinerary">

@@ -1420,6 +1420,209 @@ ${JSON.stringify(research, null, 2)}
   }
 }
 
+/**
+ * Maps WMO weather codes to app's weather condition format
+ * @param {number} weatherCode - WMO weather code
+ * @param {number} precipitation - Precipitation amount in mm
+ * @param {number} windSpeed - Wind speed in km/h
+ * @returns {string} Weather condition as used in the app
+ */
+function mapWeatherCodeToCondition(weatherCode, precipitation, windSpeed) {
+  // WMO Weather codes: https://www.nodc.noaa.gov/archive/arc0021/0002199/1.1/data/0-data/HTML/WMO-CODE/WMO4677.HTM
+
+  // Check for windy conditions first (regardless of other weather)
+  if (windSpeed > 30) {
+    return "windy";
+  }
+
+  // Clear, Sunny (codes 0, 1)
+  if (weatherCode === 0 || weatherCode === 1) {
+    return "sunny";
+  }
+
+  // Partly cloudy (codes 2, 3)
+  if (weatherCode === 2 || weatherCode === 3) {
+    return "partly_cloudy";
+  }
+
+  // Cloudy (codes 4-9)
+  if (weatherCode >= 4 && weatherCode <= 9) {
+    return "cloudy";
+  }
+
+  // Fog (codes 40-49)
+  if (weatherCode >= 40 && weatherCode <= 49) {
+    return "foggy";
+  }
+
+  // Light rain (codes 50-59, 60-61, 80-81)
+  if (
+    (weatherCode >= 50 && weatherCode <= 59) ||
+    weatherCode === 60 ||
+    weatherCode === 61 ||
+    weatherCode === 80 ||
+    weatherCode === 81
+  ) {
+    return "light_rain";
+  }
+
+  // Moderate rain (codes 62, 82, 63 with lower precipitation)
+  if (
+    weatherCode === 62 ||
+    weatherCode === 82 ||
+    (weatherCode === 63 && precipitation < 10)
+  ) {
+    return "moderate_rain";
+  }
+
+  // Heavy rain (codes 63 with higher precipitation, 64-65, 83-84)
+  if (
+    (weatherCode === 63 && precipitation >= 10) ||
+    weatherCode === 64 ||
+    weatherCode === 65 ||
+    weatherCode === 83 ||
+    weatherCode === 84
+  ) {
+    return "heavy_rain";
+  }
+
+  // Light snow (codes 70-71, 85)
+  if (weatherCode === 70 || weatherCode === 71 || weatherCode === 85) {
+    return "light_snow";
+  }
+
+  // Moderate snow (code 72, 73 with lower amounts, 86)
+  if (
+    weatherCode === 72 ||
+    (weatherCode === 73 && precipitation < 5) ||
+    weatherCode === 86
+  ) {
+    return "moderate_snow";
+  }
+
+  // Heavy snow (codes 73 with higher amounts, 74-79, 87-90)
+  if (
+    (weatherCode === 73 && precipitation >= 5) ||
+    (weatherCode >= 74 && weatherCode <= 79) ||
+    (weatherCode >= 87 && weatherCode <= 90)
+  ) {
+    return "heavy_snow";
+  }
+
+  // Hail (codes 89, 90)
+  if (weatherCode === 89 || weatherCode === 90) {
+    return "hail";
+  }
+
+  // Thunderstorm (codes 95-99, 17-19)
+  if (
+    (weatherCode >= 95 && weatherCode <= 99) ||
+    (weatherCode >= 17 && weatherCode <= 19)
+  ) {
+    return "thunderstorm";
+  }
+
+  // Stormy (codes 91-94)
+  if (weatherCode >= 91 && weatherCode <= 94) {
+    return "stormy";
+  }
+
+  // Default to partly_cloudy if we can't determine
+  return "partly_cloudy";
+}
+
+/**
+ * Fetches historical weather data for a stay's location and date range
+ * @param {Object} stay - The stay object to update with weather data
+ * @param {Object} [options]
+ * @param {number} options.startTime - Start timestamp in seconds
+ * @param {number} options.endTime - End timestamp in seconds
+ * @returns {Promise<Object>} - The stay object with weather data added
+ */
+async function getHistoricWeatherForStay(
+  stay,
+  { startTime: fallbackStartTime, endTime: fallbackEndTime } = {}
+) {
+  const startTime = stay?.arrival_time ?? fallbackStartTime;
+  const endTime = stay?.departure_time ?? fallbackEndTime;
+  if (!stay || !stay.destination || !startTime || !endTime) {
+    return [];
+  }
+
+  try {
+    // Get coordinates for the location using the search util
+    const { city, country } = stay.destination;
+    const locationQuery = `${city}, ${country}`;
+
+    const searchResult = await getSearch(locationQuery, { type: "maps" });
+
+    // Check if we got valid coordinates
+    if (!searchResult || !searchResult.places || !searchResult.places.length) {
+      console.error("Could not find coordinates for location:", locationQuery);
+      return [];
+    }
+
+    // Get coordinates from the first place result
+    const { latitude, longitude } = searchResult.places[0];
+
+    // Get historical weather data for the previous year
+    const oneYearAgo = 365 * 24 * 60 * 60; // Seconds in a year
+    const historicStartDate = startTime - oneYearAgo;
+    const historicEndDate = endTime - oneYearAgo;
+
+    const weatherData = await getHistoricWeather(
+      { latitude, longitude },
+      historicStartDate,
+      historicEndDate
+    );
+
+    // Check if we got valid weather data
+    if (
+      !weatherData ||
+      !weatherData.daily ||
+      !weatherData.daily.time ||
+      !weatherData.daily.time.length
+    ) {
+      console.error("Could not get historical weather data");
+      return [];
+    }
+
+    // Map the daily weather data to the stay's weather array
+    const weatherArray = weatherData.daily.time.map((dateStr, index) => {
+      // Get the weather code and other relevant data
+      const weatherCode = weatherData.daily.weather_code[index];
+      const precipitation = weatherData.daily.precipitation_sum[index] || 0;
+      const windSpeed = weatherData.daily.wind_speed_10m_max[index] || 0;
+      const temperature = weatherData.daily.temperature_2m_mean[index] || 0;
+
+      // Map to the app's weather condition format
+      const condition = mapWeatherCodeToCondition(
+        weatherCode,
+        precipitation,
+        windSpeed
+      );
+
+      // Convert the date to timestamps
+      const date = new Date(dateStr);
+      const startTime = Math.floor(date.getTime() / 1000);
+      const endTime = startTime + 86400; // Add one day in seconds
+
+      // Return the weather object
+      return {
+        condition,
+        temperature,
+        start_time: startTime + oneYearAgo, // Adjust back to the current year
+        end_time: endTime + oneYearAgo, // Adjust back to the current year
+      };
+    });
+
+    return weatherArray;
+  } catch (error) {
+    console.error("Error getting historical weather data:", error);
+    return stay;
+  }
+}
+
 export {
   getQueryPlan,
   getPageContent,
@@ -1427,4 +1630,5 @@ export {
   getStayResearch,
   getPlaceInfo,
   getPlaceResearch,
+  getHistoricWeatherForStay,
 };
