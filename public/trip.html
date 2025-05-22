@@ -4,24 +4,194 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Node Simple Server: AI Prototype Example</title>
+  <title>Trip Planner</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    h1, h2, h3 {
+      color: #222;
+    }
+
+    .trip-header {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .trip-header h1 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .trip-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      font-size: 16px;
+    }
+
+    .trip-dates, .trip-preferences {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .trip-dates span, .trip-preferences span {
+      background-color: #e8f4f8;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+
+    .destination-search {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .destination-search h2 {
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+
+    #searchForm {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    #searchQuery {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .trip-itinerary {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .trip-itinerary h2 {
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+
+    .error-message {
+      background-color: #fff0f0;
+      border-left: 4px solid #ff5252;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+
+    .error-message h2 {
+      margin-top: 0;
+      color: #e53935;
+    }
+
+    .error-message .button {
+      display: inline-block;
+      background-color: #4CAF50;
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+
+    .city-card-container {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+  </style>
 </head>
 
 <body>
-  <h1>AI Prototype Example</h1>
-  <form id="search">
-    <select id="provider">
-      <option value="anthropic">Anthropic Claude</option>
-      <option value="openai">OpenAI GPT</option>
-      <option value="google">Google Gemini</option>
-    </select>
-    <input id="query" type="text" />
-  </form>
-  <div id="answer"></div>
-  <button id="share">Share</button>
+  <!-- Loading State -->
+  <div id="loadingState">
+    <p>Loading trip information...</p>
+  </div>
+
+  <!-- Error State -->
+  <div id="errorState" style="display: none;">
+    <div class="error-message">
+      <h2>Error Loading Trip</h2>
+      <p id="errorMessage"></p>
+      <a href="/" class="button">Return to Home</a>
+    </div>
+  </div>
+
+  <!-- Trip Content -->
+  <div id="tripContent" style="display: none;">
+    <div class="trip-header">
+      <h1 id="tripTitle"></h1>
+      <div class="trip-meta">
+        <div class="trip-dates">
+          <span id="tripDates"></span>
+          <span id="tripDays"></span>
+        </div>
+        <div class="trip-preferences">
+          <span id="tripOrigin"></span>
+          <span id="tripTravelers"></span>
+          <span id="tripPace"></span>
+          <span id="tripBudget"></span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="destination-search">
+      <h2>Add Destinations</h2>
+      <form id="searchForm">
+        <input type="text" id="searchQuery" placeholder="Search for cities, countries, or regions" required>
+        <button type="submit">Search</button>
+      </form>
+      <div id="searchResults"></div>
+    </div>
+    
+    <div class="trip-itinerary">
+      <h2>Your Itinerary</h2>
+      <div id="itineraryContent">
+        <p id="emptyItineraryMessage">No destinations added yet. Search for a destination above to get started.</p>
+        <trip-itinerary style="display: none;"></trip-itinerary>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module" src="/components/city-card.js"></script>
+  <script type="module" src="/components/trip-itinerary.js"></script>
+  <script type="module" src="/trip.js"></script>
 </body>
-<script type="module">
-  import "/main.js";
-</script>
 
 </html>

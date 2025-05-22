@@ -6,12 +6,12 @@ The Trip Planner is a hackathon project for creating AI-assisted travel itinerar
 
 ## Pages
 
-### 1. Main Page (`index.html`)
+### 1. Main Page (`/`)
 - Main entry point for the application
 - Has trip setup input to provide your trip preferences
-- After submitting your trip info, it stores the trip json and then redirects you to `trip.html?${id}` from the storage id value.
+- After submitting your trip info, it stores the trip json and then redirects you to `/trip?${id}` from the storage id value.
 
-### 2. Trip Page (`trip.html?${id}`)
+### 2. Trip Page (`/trip?${id}`)
 - Loads your saved trip from the storage id query key
 - Lets you search for destinations to visit with a free form search bar
 - After submitting your search suggested destinations are populated as a city card carousel below
@@ -19,7 +19,7 @@ The Trip Planner is a hackathon project for creating AI-assisted travel itinerar
 
 ## Test Pages
 
-### 1. Dashboard (`dashboard.html`)
+### 1. Dashboard (`/dashboard`)
 - Testing environment for all application features
 - Tab-based interface for testing different API functionalities:
   - Search: Test search API (web, places, images, maps)
@@ -31,26 +31,19 @@ The Trip Planner is a hackathon project for creating AI-assisted travel itinerar
   - Place Research: Find places in cities matching criteria
   - Stay Research: Find destinations matching preferences
 
-### 2. Components Library (`components.html`)
+### 2. Components Library (`/components`)
 - Showcases all UI components used in the application
 - Demonstrates how components can be combined to create interfaces
 
 ## Utility Files
 
-### 1. Main (`main.js`)
-- Core functionality for the AI prototype
-- Sets up AI provider registry with Vercel AI SDK
-- Handles user queries and streaming responses
-- Manages conversation storage and sharing
-- Renders markdown content with marked.js
-
-### 2. Search (`search.js`)
+### 1. Search (`search.js`)
 - Provides search functionality via SERPER API
 - `getSearch()`: Searches web with various types (search, images, places, maps)
 - `getHistoricWeather()`: Retrieves weather data using Open-Meteo API
 - Defines TypeScript interfaces for search results and weather data
 
-### 3. Research (`research.js`)
+### 2. Research (`research.js`)
 - Advanced research and trip planning utilities
 - `getQueryPlan()`: Generates search queries based on user input
 - `getPageContent()`: Extracts readable content from web pages
@@ -59,12 +52,6 @@ The Trip Planner is a hackathon project for creating AI-assisted travel itinerar
 - `getPlaceInfo()`: Extracts structured place information
 - `getPlaceResearch()`: Finds places in destinations matching criteria
 - Defines comprehensive JSON schemas for trip planning
-
-### 4. Dashboard (`dashboard.js`)
-- Implements dashboard functionality
-- Handles tab navigation and form processing
-- Integrates with research and search utilities
-- Creates and renders UI components dynamically
 
 ## Server Functionality (`server.ts`)
 
