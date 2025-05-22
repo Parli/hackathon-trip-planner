@@ -26,6 +26,7 @@ class StayItinerary extends HTMLElement {
     this._handleDayMove = this._handleDayMove.bind(this);
     this._handleAddDay = this._handleAddDay.bind(this);
     this._handlePlanUpdate = this._handlePlanUpdate.bind(this);
+    this._handleDayDateChange = this._handleDayDateChange.bind(this);
     this._updateStayBoundaries = this._updateStayBoundaries.bind(this);
     this.render();
   }
@@ -41,6 +42,7 @@ class StayItinerary extends HTMLElement {
     this.shadowRoot.addEventListener("plan-move", this._handlePlanMove);
     this.shadowRoot.addEventListener("plan-update", this._handlePlanUpdate);
     this.shadowRoot.addEventListener("day-move", this._handleDayMove);
+    this.shadowRoot.addEventListener("day-date-change", this._handleDayDateChange);
   }
 
   disconnectedCallback() {
@@ -57,6 +59,7 @@ class StayItinerary extends HTMLElement {
     this.shadowRoot.removeEventListener("plan-move", this._handlePlanMove);
     this.shadowRoot.removeEventListener("plan-update", this._handlePlanUpdate);
     this.shadowRoot.removeEventListener("day-move", this._handleDayMove);
+    this.shadowRoot.removeEventListener("day-date-change", this._handleDayDateChange);
   }
 
   get stay() {
@@ -1035,6 +1038,90 @@ class StayItinerary extends HTMLElement {
     // Update the stay in the trip state
     TripState.update(this._stay.id, updatedStay);
 
+    // Save the updated trip data
+    TripState.saveTrip();
+  }
+  
+  /**
+   * Handle the day-date-change event from a day-plan
+   * @param {CustomEvent} event The day-date-change event
+   */
+  _handleDayDateChange(event) {
+    const { oldDate, newDate, activities, dayDiff } = event.detail;
+    
+    if (!oldDate || !newDate || !this._stay) return;
+    
+    
+    // Get the beginning and end of the old day in seconds
+    const oldDayStart = oldDate;
+    const oldDayEnd = new Date(oldDate * 1000);
+    oldDayEnd.setHours(23, 59, 59, 999);
+    const oldDayEndTs = Math.floor(oldDayEnd.getTime() / 1000);
+    
+    // Get the beginning and end of the new day in seconds
+    const newDayStart = newDate;
+    const newDayEnd = new Date(newDate * 1000);
+    newDayEnd.setHours(23, 59, 59, 999);
+    const newDayEndTs = Math.floor(newDayEnd.getTime() / 1000);
+    
+    // Calculate the time shift in seconds
+    const timeShift = (newDate - oldDate);
+    
+    // Initialize day_plans if it doesn't exist
+    if (!this._stay.day_plans) {
+      this._stay.day_plans = [];
+    }
+    
+    // Separate day plans into those for this day and other days
+    const dayPlans = [];
+    const otherDayPlans = [];
+    
+    this._stay.day_plans.forEach((plan) => {
+      if (plan.start_time >= oldDayStart && plan.start_time <= oldDayEndTs) {
+        dayPlans.push(plan);
+      } else {
+        otherDayPlans.push(plan);
+      }
+    });
+    
+    // Create a copy of the stay to modify
+    let updatedStay = { ...this._stay };
+    
+    // If there are plans in the day, move them
+    if (dayPlans.length > 0) {
+      // Create a copy of the day plans to be moved and shift their times
+      const movedDayPlans = dayPlans.map((plan) => {
+        const updatedPlan = { ...plan };
+        updatedPlan.start_time += timeShift;
+        updatedPlan.end_time += timeShift;
+        return updatedPlan;
+      });
+      
+      // Combine the moved plans with the other plans
+      updatedStay.day_plans = [...otherDayPlans, ...movedDayPlans];
+      
+      // Update arrival and departure times based on the updated plans
+      updatedStay = this._updateStayBoundaries(updatedStay);
+    } else {
+      // No plans to move, just adjust the stay's arrival/departure times
+      // Check if this is the first or last day of the stay
+      const isFirstDay = Math.abs(oldDayStart - this._stay.arrival_time) < 86400;
+      const isLastDay = Math.abs(oldDayEndTs - this._stay.departure_time) < 86400;
+      
+      if (isFirstDay) {
+        // Update arrival time
+        updatedStay.arrival_time = newDate;
+      }
+      
+      if (isLastDay) {
+        // Update departure time to end of the new day
+        updatedStay.departure_time = newDayEndTs;
+      }
+    }
+    
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+    
     // Save the updated trip data
     TripState.saveTrip();
   }

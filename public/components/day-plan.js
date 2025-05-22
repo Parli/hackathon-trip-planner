@@ -19,15 +19,20 @@ class DayPlan extends HTMLElement {
     this._stay = null;
     this._date = null;
     this._handleButtonClick = this._handleButtonClick.bind(this);
+    this._handleDateClick = this._handleDateClick.bind(this);
+    this._handleDateChange = this._handleDateChange.bind(this);
     this.render();
   }
 
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._handleButtonClick);
+    this.shadowRoot.addEventListener("click", this._handleDateClick);
+    this._setupDatePicker();
   }
 
   disconnectedCallback() {
     this.shadowRoot.removeEventListener("click", this._handleButtonClick);
+    this.shadowRoot.removeEventListener("click", this._handleDateClick);
   }
 
   /**
@@ -54,6 +59,7 @@ class DayPlan extends HTMLElement {
   set date(timestamp) {
     this._date = timestamp;
     this.render();
+    this._setupDatePicker();
   }
 
   /**
@@ -169,6 +175,86 @@ class DayPlan extends HTMLElement {
 
     return formattedDate;
   }
+  
+  _getDateValue(timestamp) {
+    if (!timestamp) return "";
+    const date = new Date(timestamp * 1000);
+    // Adjust for local timezone to prevent date shifts
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`; // Format as YYYY-MM-DD
+  }
+  
+  _getTimestampFromDateString(dateString) {
+    // Create a new date object from the date string
+    // Use UTC parsing to avoid timezone issues
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setHours(0, 0, 0, 0);
+    return Math.floor(date.getTime() / 1000);
+  }
+  
+  _setupDatePicker() {
+    if (!this._date) return;
+    
+    const datePicker = this.shadowRoot.querySelector('.date-picker');
+    
+    if (datePicker) {
+      datePicker.value = this._getDateValue(this._date);
+      datePicker.addEventListener('change', this._handleDateChange);
+    }
+  }
+  
+  _handleDateClick(event) {
+    // Check if the click is on the date display
+    if (event.target.classList.contains('date-display')) {
+      const datePicker = this.shadowRoot.querySelector('.date-picker');
+      if (datePicker) {
+        datePicker.showPicker();
+      }
+    }
+  }
+  
+  _handleDateChange(event) {
+    if (!this._date || !this._stay) return;
+    
+    const newDateValue = event.target.value;
+    const newTimestamp = this._getTimestampFromDateString(newDateValue);
+    
+    // If the date hasn't changed, do nothing
+    if (newTimestamp === this._date) return;
+    
+    // Get the beginning of the old day
+    const oldDayStart = new Date(this._date * 1000);
+    oldDayStart.setHours(0, 0, 0, 0);
+    const oldTimestamp = Math.floor(oldDayStart.getTime() / 1000);
+    
+    // Get the beginning of the new day
+    const newDayStart = new Date(newTimestamp * 1000);
+    newDayStart.setHours(0, 0, 0, 0);
+    const adjustedNewTimestamp = Math.floor(newDayStart.getTime() / 1000);
+    
+    // Calculate the difference in days between old and new date
+    const dayDiff = Math.round((adjustedNewTimestamp - oldTimestamp) / 86400);
+    
+    // Update the date property
+    this._date = adjustedNewTimestamp;
+    
+    // Dispatch a day-date-change event
+    this.dispatchEvent(
+      new CustomEvent('day-date-change', {
+        detail: {
+          oldDate: oldTimestamp,
+          newDate: adjustedNewTimestamp,
+          activities: this._getActivities(),
+          dayDiff: dayDiff
+        },
+        bubbles: true,
+        composed: true
+      })
+    );
+  }
 
   _getTemperatureRange() {
     const weather = this._getWeather();
@@ -270,6 +356,23 @@ class DayPlan extends HTMLElement {
         .date {
           font-size: 1.2rem;
           font-weight: bold;
+          position: relative;
+          cursor: pointer;
+        }
+        
+        .date:hover {
+          text-decoration: underline;
+        }
+        
+        .date-picker {
+          width: 0;
+          height: 0;
+          opacity: 0;
+          position: absolute;
+          border: none;
+          background: transparent;
+          padding: 0;
+          margin: 0;
         }
 
         .icons {
@@ -301,7 +404,10 @@ class DayPlan extends HTMLElement {
 
       <div class="header">
         <div class="date-section">
-          <div class="date">${dateDisplay}</div>
+          <div class="date">
+            <input type="date" class="date-picker" value="${this._getDateValue(this._date)}"/>
+            <span class="date-display">${dateDisplay}</span>
+          </div>
           <div class="day-buttons">
             <button class="day-button day-up-button" data-action="day-earlier" title="Move day earlier (-1 day)">↑</button>
             <button class="day-button day-down-button" data-action="day-later" title="Move day later (+1 day)">↓</button>
