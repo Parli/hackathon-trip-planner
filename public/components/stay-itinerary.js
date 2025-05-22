@@ -25,6 +25,7 @@ class StayItinerary extends HTMLElement {
     this._handlePlanMove = this._handlePlanMove.bind(this);
     this._handleDayMove = this._handleDayMove.bind(this);
     this._handleAddDay = this._handleAddDay.bind(this);
+    this._handlePlanUpdate = this._handlePlanUpdate.bind(this);
     this._updateStayBoundaries = this._updateStayBoundaries.bind(this);
     this.render();
   }
@@ -38,6 +39,7 @@ class StayItinerary extends HTMLElement {
       this._handleAddToPlan
     );
     this.shadowRoot.addEventListener("plan-move", this._handlePlanMove);
+    this.shadowRoot.addEventListener("plan-update", this._handlePlanUpdate);
     this.shadowRoot.addEventListener("day-move", this._handleDayMove);
   }
 
@@ -53,6 +55,7 @@ class StayItinerary extends HTMLElement {
       this._handleAddToPlan
     );
     this.shadowRoot.removeEventListener("plan-move", this._handlePlanMove);
+    this.shadowRoot.removeEventListener("plan-update", this._handlePlanUpdate);
     this.shadowRoot.removeEventListener("day-move", this._handleDayMove);
   }
 
@@ -811,6 +814,44 @@ class StayItinerary extends HTMLElement {
 
     // Update the plan in the day plans array
     updatedDayPlans[planIndex] = planToUpdate;
+
+    // Create a preliminary updated stay object
+    let updatedStay = {
+      ...this._stay,
+      day_plans: updatedDayPlans,
+    };
+
+    // Update arrival and departure times based on the updated plans
+    updatedStay = this._updateStayBoundaries(updatedStay);
+
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+
+    // Save the updated trip data
+    TripState.saveTrip();
+  }
+  
+  /**
+   * Handle the plan-update event from a plan-item
+   * @param {CustomEvent} event The plan-update event
+   */
+  _handlePlanUpdate(event) {
+    const { oldPlan, newPlan } = event.detail;
+
+    if (!oldPlan || !oldPlan.id || !newPlan || !this._stay || !this._stay.day_plans) return;
+
+    // Find the index of the plan to update
+    const planIndex = this._stay.day_plans.findIndex(
+      (item) => item.id === oldPlan.id
+    );
+
+    if (planIndex === -1) return; // Plan not found
+
+    // Create a copy of the day plans
+    const updatedDayPlans = [...this._stay.day_plans];
+    
+    // Update the plan in the day plans array
+    updatedDayPlans[planIndex] = newPlan;
 
     // Create a preliminary updated stay object
     let updatedStay = {

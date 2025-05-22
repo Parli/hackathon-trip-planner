@@ -14,15 +14,20 @@ class PlanItem extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._plan = null;
     this._handleDeleteClick = this._handleDeleteClick.bind(this);
+    this._handleTimeClick = this._handleTimeClick.bind(this);
+    this._handleTimeChange = this._handleTimeChange.bind(this);
     this.render();
   }
 
   connectedCallback() {
     this.shadowRoot.addEventListener("click", this._handleDeleteClick);
+    this.shadowRoot.addEventListener("click", this._handleTimeClick);
+    this._setupTimeInputs();
   }
 
   disconnectedCallback() {
     this.shadowRoot.removeEventListener("click", this._handleDeleteClick);
+    this.shadowRoot.removeEventListener("click", this._handleTimeClick);
   }
 
   get plan() {
@@ -32,6 +37,7 @@ class PlanItem extends HTMLElement {
   set plan(value) {
     this._plan = value;
     this.render();
+    this._setupTimeInputs();
   }
 
   _formatTime(timestamp) {
@@ -46,6 +52,87 @@ class PlanItem extends HTMLElement {
       month: "short",
       day: "numeric",
     });
+  }
+  
+  _getTimeFromTimestamp(timestamp) {
+    const date = new Date(timestamp * 1000);
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  }
+  
+  _getTimestampFromTimeString(timeString, referenceTimestamp) {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const date = new Date(referenceTimestamp * 1000);
+    date.setHours(hours, minutes, 0, 0);
+    return Math.floor(date.getTime() / 1000);
+  }
+  
+  _setupTimeInputs() {
+    if (!this._plan) return;
+    
+    const startTimeInput = this.shadowRoot.querySelector('.start-time-input');
+    const endTimeInput = this.shadowRoot.querySelector('.end-time-input');
+    
+    if (startTimeInput && endTimeInput) {
+      startTimeInput.value = this._getTimeFromTimestamp(this._plan.start_time);
+      endTimeInput.value = this._getTimeFromTimestamp(this._plan.end_time);
+      
+      startTimeInput.addEventListener('change', this._handleTimeChange);
+      endTimeInput.addEventListener('change', this._handleTimeChange);
+    }
+  }
+  
+  _handleTimeClick(event) {
+    // Check if the click is on the time span
+    if (event.target.classList.contains('time-display')) {
+      const timeInput = event.target.previousElementSibling;
+      if (timeInput && timeInput.type === 'time') {
+        timeInput.showPicker();
+      }
+    }
+  }
+  
+  _handleTimeChange(event) {
+    if (!this._plan) return;
+    
+    const input = event.target;
+    const newTimeValue = input.value;
+    const duration = this._plan.end_time - this._plan.start_time;
+    
+    const updatedPlan = {...this._plan};
+    
+    if (input.classList.contains('start-time-input')) {
+      const newStartTime = this._getTimestampFromTimeString(newTimeValue, this._plan.start_time);
+      updatedPlan.start_time = newStartTime;
+      
+      // If start time is after end time, adjust end time to maintain duration
+      if (newStartTime > this._plan.end_time) {
+        updatedPlan.end_time = newStartTime + duration;
+      }
+    } else if (input.classList.contains('end-time-input')) {
+      const newEndTime = this._getTimestampFromTimeString(newTimeValue, this._plan.end_time);
+      updatedPlan.end_time = newEndTime;
+      
+      // If end time is before start time, adjust start time to maintain duration
+      if (newEndTime < this._plan.start_time) {
+        updatedPlan.start_time = newEndTime - duration;
+      }
+    }
+    
+    // Dispatch an event to update the plan
+    this.dispatchEvent(
+      new CustomEvent('plan-update', {
+        detail: {
+          oldPlan: this._plan,
+          newPlan: updatedPlan
+        },
+        bubbles: true,
+        composed: true
+      })
+    );
+    
+    // Update the local plan
+    this._plan = updatedPlan;
+    this.render();
   }
 
   render() {
@@ -148,6 +235,7 @@ class PlanItem extends HTMLElement {
           margin-right: 0.5rem;
           white-space: nowrap;
           font-size: 0.9rem;
+          position: relative;
         }
 
         .icon {
@@ -168,8 +256,8 @@ class PlanItem extends HTMLElement {
         }
 
         .image {
-          width: 100px;
-          height: 100px;
+          width: 120px;
+          height: 80px;
           object-fit: cover;
           border-radius: 4px;
           flex-shrink: 0;
@@ -194,16 +282,37 @@ class PlanItem extends HTMLElement {
           padding: 0.2rem 0.5rem;
           border-radius: 4px;
         }
-      </style>
 
-      <div class="date">${this._formatDate(start_time)}</div>
+        .time-picker {
+          width: 0;
+          height: 0;
+          opacity: 0;
+          position: absolute;
+          border: none;
+          background: transparent;
+          padding: 0;
+          margin: 0;
+        }
+        
+        .time-display {
+          cursor: pointer;
+        }
+        
+        .time-display:hover {
+          text-decoration: underline;
+        }
+      </style>
 
       <div class="container">
         <div class="content">
           <div class="header">
-            <div class="time">${this._formatTime(
-              start_time
-            )} - ${this._formatTime(end_time)}</div>
+            <div class="time">
+              <input class="time-picker start-time-input" type="time" value="${this._getTimeFromTimestamp(start_time)}"/>
+              <span class="time-display">${this._formatTime(start_time)}</span>
+              &nbsp;-&nbsp;
+              <input class="time-picker end-time-input" type="time" value="${this._getTimeFromTimestamp(end_time)}"/>
+              <span class="time-display">${this._formatTime(end_time)}</span>
+            </div>
             <div class="icon">
               <place-icon kind="${location.kind}"></place-icon>
             </div>
