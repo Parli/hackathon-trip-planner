@@ -118,6 +118,7 @@ interface Destination {
 
 // A specific location, like a venue, or hotel, or park, or restaurant, etc that the user may want to do
 interface Place {
+  id: string // Randomly generated UUID
   kind:
     // Location for a stay
     | "accommodation"
@@ -169,12 +170,14 @@ interface Schedule {
 
 // A time sensitive activity associated with a place, like a concert or hotel check in, or plan to go to a museum
 interface Plan extends Schedule{
+  id: string // Randomly generated UUID
   kind: "plan"
   location: Place
 }
 
 // Plans for getting around
 interface Transportation extends Schedule {
+  id: string // Randomly generated UUID
   kind: "transportation"
   departure: Place
   arrival: Place
@@ -182,6 +185,7 @@ interface Transportation extends Schedule {
 }
 
 interface Stay {
+  id: string // Randomly generated UUID
   destination: Destination
   description: string | null
   // Time you will arrive to the destination
@@ -221,6 +225,7 @@ interface Preferences {
 }
 
 export interface Trip {
+  id: string // Randomly generated UUID
   // Name of the trip
   title: string
   timeline: Timeline

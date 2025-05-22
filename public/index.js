@@ -5,8 +5,15 @@ document.addEventListener("DOMContentLoaded", () => {
   tripForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
+    const idArray = crypto.getRandomValues(new Uint8Array(16));
+    const id = btoa(String.fromCharCode.apply(null, idArray))
+      .replaceAll("=", "")
+      .replaceAll("+", "-")
+      .replaceAll("/", "_");
+
     // Gather form data
     const tripData = {
+      id,
       title: document.getElementById("tripTitle").value,
       timeline: {
         start_date: {
@@ -78,8 +85,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       // Save trip data to server
-      const saveResponse = await fetch("/api/save/", {
-        method: "POST",
+      const saveResponse = await fetch(`/api/save/${id}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },

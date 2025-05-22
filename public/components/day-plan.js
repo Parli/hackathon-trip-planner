@@ -20,7 +20,16 @@ class DayPlan extends HTMLElement {
     this._activities = [];
     this._hasTransportation = false;
     this._weather = null;
+    this._handleDeleteClick = this._handleDeleteClick.bind(this);
     this.render();
+  }
+  
+  connectedCallback() {
+    this.shadowRoot.addEventListener('click', this._handleDeleteClick);
+  }
+  
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener('click', this._handleDeleteClick);
   }
 
   /**
@@ -102,6 +111,26 @@ class DayPlan extends HTMLElement {
           border-radius: 8px;
           margin-bottom: 1rem;
           box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          position: relative;
+        }
+        
+        .delete-button {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          background-color: #f44336;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 0.3rem 0.6rem;
+          cursor: pointer;
+          font-size: 0.8rem;
+          transition: background-color 0.2s;
+        }
+        
+        .delete-button:hover {
+          background-color: #d32f2f;
         }
 
         .date {
@@ -158,6 +187,8 @@ class DayPlan extends HTMLElement {
             ? `<div class="temp">${this._getTemperatureRange()}</div>`
             : ""
         }
+        
+        <button class="delete-button" data-action="delete-day">Delete</button>
       </div>
 
       <div class="activities">
@@ -191,6 +222,28 @@ class DayPlan extends HTMLElement {
         }
       }
     });
+  }
+  
+  /**
+   * Handle clicks on the delete button
+   * @param {Event} event The click event
+   */
+  _handleDeleteClick(event) {
+    const target = event.target;
+    
+    if (target.dataset.action === 'delete-day') {
+      // Dispatch a day-delete event with the day's date
+      this.dispatchEvent(
+        new CustomEvent("day-delete", {
+          detail: {
+            date: this._date,
+            activities: this._activities
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
   }
 }
 

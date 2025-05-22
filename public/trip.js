@@ -2,32 +2,20 @@
 import { marked } from "https://cdn.jsdelivr.net/npm/marked@15.0.11/+esm";
 import { getStayResearch } from "/research.js";
 import "./components/card-carousel.js";
-
-// Global state
-let tripData = null;
+import * as TripState from "/state.js";
 
 // Initialize the trip page
 (async function init() {
   try {
     // Get the trip ID from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const [id, value] = [...urlParams.entries()][0] ?? [];
+    const tripId = TripState.getIdFromUrl();
 
     // Check if parameter is a valid trip ID
-    if (id && !value) {
+    if (tripId) {
       // Show loading state (already visible by default)
 
-      // Retrieve the stored trip from the ID
-      const response = await fetch(`/api/save/${id}`);
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to load trip data: ${response.status} ${response.statusText}`
-        );
-      }
-
-      // Parse the trip data
-      tripData = await response.json();
+      // Retrieve the stored trip data
+      const tripData = await TripState.loadTrip(tripId);
 
       // Render the trip
       renderTrip(tripData);
@@ -43,6 +31,16 @@ let tripData = null;
     document.getElementById("errorMessage").textContent = error.message;
   }
 })();
+
+// Add event listeners for state changes
+TripState.addEventListener('trip-updated', (tripData) => {
+  // Re-render trip when data is updated
+  renderTrip(tripData);
+});
+
+TripState.addEventListener('trip-error', (error) => {
+  console.error("Trip state error:", error);
+});
 
 // Render the trip data
 function renderTrip(trip) {
@@ -104,83 +102,42 @@ function renderTrip(trip) {
  * @param {Object} stay The stay to add to the trip
  */
 function addStayToTrip(stay) {
-  // Add the stay to the trip data
-  if (!tripData.stays) {
-    tripData.stays = [];
-  }
-
-  // Check if this stay already exists in the trip by comparing destinations
-  const existingStayIndex = tripData.stays.findIndex(
-    (existingStay) =>
-      existingStay.destination.city === stay.destination.city &&
-      existingStay.destination.country === stay.destination.country
-  );
-
-  if (existingStayIndex !== -1) {
-    // If the stay already exists, show a message
-    const searchResults = document.getElementById("searchResults");
-    searchResults.innerHTML = `<p>Destination ${stay.destination.city}, ${stay.destination.country} is already in your itinerary.</p>`;
-    return;
-  }
-
-  // Add the stay to the trip
-  tripData.stays.push(stay);
-
-  // Update the trip itinerary display
-  const emptyItineraryMessage = document.getElementById(
-    "emptyItineraryMessage"
-  );
-  const tripItinerary = document.querySelector("trip-itinerary");
-
-  // Hide the empty message and show the itinerary
-  if (tripData.stays.length > 0) {
-    emptyItineraryMessage.style.display = "none";
-    tripItinerary.style.display = "block";
-
-    // Update the trip-itinerary component with the updated trip data
-    tripItinerary.trip = tripData;
-  }
-
-  // Show a success message
   const searchResults = document.getElementById("searchResults");
-  searchResults.innerHTML = `<p>Added ${stay.destination.city}, ${stay.destination.country} to your itinerary!</p>`;
-
-  // Save the updated trip data
-  saveTrip();
-}
-
-/**
- * Save the current trip data
- */
-async function saveTrip() {
+  
   try {
-    // Get the trip ID from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const [id, value] = [...urlParams.entries()][0] ?? [];
-
-    if (!id) {
-      console.error("No trip ID found for saving");
+    // Get current trip data
+    const tripData = TripState.getTrip();
+    
+    // Check if this stay already exists in the trip by comparing destinations
+    const existingStay = tripData.stays.find(
+      (existingStay) =>
+        existingStay.destination.city === stay.destination.city &&
+        existingStay.destination.country === stay.destination.country
+    );
+    
+    if (existingStay) {
+      // If the stay already exists, show a message
+      searchResults.innerHTML = `<p>Destination ${stay.destination.city}, ${stay.destination.country} is already in your itinerary.</p>`;
       return;
     }
-
-    // Send the updated trip data to the server
-    const response = await fetch(`/api/save/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(tripData),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to save trip data: ${response.status} ${response.statusText}`
-      );
-    }
-
-    console.log("Trip data saved successfully");
+    
+    // Add stay to the trip
+    const updatedTrip = {
+      ...tripData,
+      stays: [...tripData.stays, stay]
+    };
+    
+    // Update the trip state
+    TripState.update(tripData.id, updatedTrip);
+    
+    // Show a success message
+    searchResults.innerHTML = `<p>Added ${stay.destination.city}, ${stay.destination.country} to your itinerary!</p>`;
+    
+    // Save the updated trip data
+    TripState.saveTrip();
   } catch (error) {
-    console.error("Error saving trip:", error);
+    console.error("Error adding stay to trip:", error);
+    searchResults.innerHTML = `<p class="error">Error adding destination: ${error.message}</p>`;
   }
 }
 

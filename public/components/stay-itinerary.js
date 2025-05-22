@@ -10,6 +10,8 @@
 import "./day-plan.js";
 import "./place-card.js";
 import "./card-carousel.js";
+import { getPlaceResearch } from "/research.js";
+import * as TripState from "/state.js";
 
 class StayItinerary extends HTMLElement {
   constructor() {
@@ -17,7 +19,22 @@ class StayItinerary extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._stay = null;
     this._dayPlans = [];
+    this._handlePlaceDelete = this._handlePlaceDelete.bind(this);
+    this._handleDayDelete = this._handleDayDelete.bind(this);
+    this._handlePlanDelete = this._handlePlanDelete.bind(this);
     this.render();
+  }
+  
+  connectedCallback() {
+    this.shadowRoot.addEventListener('place-delete', this._handlePlaceDelete);
+    this.shadowRoot.addEventListener('day-delete', this._handleDayDelete);
+    this.shadowRoot.addEventListener('plan-delete', this._handlePlanDelete);
+  }
+  
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener('place-delete', this._handlePlaceDelete);
+    this.shadowRoot.removeEventListener('day-delete', this._handleDayDelete);
+    this.shadowRoot.removeEventListener('plan-delete', this._handlePlanDelete);
   }
 
   get stay() {
@@ -147,6 +164,31 @@ class StayItinerary extends HTMLElement {
           margin-right: 0.5rem;
           font-size: 1.4rem;
         }
+        
+        .search-container {
+          margin-left: auto;
+          position: relative;
+        }
+        
+        .search-input {
+          padding: 0.5rem;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 0.9rem;
+          width: 200px;
+        }
+        
+        .search-loading {
+          position: absolute;
+          top: 35px;
+          right: 0;
+          background-color: #f8f8f8;
+          padding: 5px 10px;
+          border-radius: 4px;
+          border: 1px solid #ddd;
+          font-size: 0.8rem;
+          z-index: 100;
+        }
 
         card-carousel {
           width: 100%;
@@ -173,6 +215,9 @@ class StayItinerary extends HTMLElement {
         <div class="section-title">
           <span class="section-icon">🎭</span>
           <span>Things to Do</span>
+          <div class="search-container">
+            <input type="text" id="activities-search" placeholder="Search for activities..." class="search-input">
+          </div>
         </div>
 
         ${
@@ -186,6 +231,9 @@ class StayItinerary extends HTMLElement {
         <div class="section-title">
           <span class="section-icon">🍽️</span>
           <span>Food Places</span>
+          <div class="search-container">
+            <input type="text" id="food-search" placeholder="Search for restaurants..." class="search-input">
+          </div>
         </div>
 
         ${
@@ -243,6 +291,202 @@ class StayItinerary extends HTMLElement {
         element.weather = dayPlan.weather;
       }
     });
+    
+    // Add event listeners for search inputs
+    const activitiesSearch = this.shadowRoot.getElementById('activities-search');
+    const foodSearch = this.shadowRoot.getElementById('food-search');
+    
+    if (activitiesSearch) {
+      activitiesSearch.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && activitiesSearch.value.trim()) {
+          const query = activitiesSearch.value.trim();
+          const destination = this._stay.destination;
+          
+          try {
+            // Show loading indicator
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.textContent = 'Searching...';
+            loadingIndicator.className = 'search-loading';
+            activitiesSearch.parentNode.appendChild(loadingIndicator);
+            
+            // Get new activities
+            const newPlaces = await getPlaceResearch(query, destination);
+            
+            // Update the underlying data structure
+            if (newPlaces.length > 0 && this._stay) {
+              // Get existing options
+              const existingOptions = this._stay.options || [];
+              
+              // Get food places from existing options
+              const foodPlaces = existingOptions.filter(place => place.kind === "food");
+              
+              // Get existing non-food places
+              const existingNonFoodPlaces = existingOptions.filter(place => place.kind !== "food");
+              
+              // Get new non-food places from search results
+              const newNonFoodPlaces = newPlaces.filter(place => place.kind !== "food");
+              
+              // Create updated stay with new options - new places at the start
+              const updatedStay = {
+                ...this._stay,
+                options: [...newNonFoodPlaces, ...existingNonFoodPlaces, ...foodPlaces]
+              };
+              
+              // Update the stay in the trip state using its ID
+              TripState.update(this._stay.id, updatedStay);
+              
+              // Save the updated trip data
+              TripState.saveTrip();
+            }
+            
+            // Remove loading indicator
+            if (loadingIndicator && loadingIndicator.parentNode) {
+              loadingIndicator.parentNode.removeChild(loadingIndicator);
+            }
+          } catch (error) {
+            console.error('Error searching for activities:', error);
+          }
+        }
+      });
+    }
+    
+    if (foodSearch) {
+      foodSearch.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && foodSearch.value.trim()) {
+          const query = foodSearch.value.trim();
+          const destination = this._stay.destination;
+          
+          try {
+            // Show loading indicator
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.textContent = 'Searching...';
+            loadingIndicator.className = 'search-loading';
+            foodSearch.parentNode.appendChild(loadingIndicator);
+            
+            // Get new food places
+            const newPlaces = await getPlaceResearch(query, destination);
+            
+            // Update the underlying data structure
+            if (newPlaces.length > 0 && this._stay) {
+              // Get existing options
+              const existingOptions = this._stay.options || [];
+              
+              // Get non-food places from existing options
+              const nonFoodPlaces = existingOptions.filter(place => place.kind !== "food");
+              
+              // Get existing food places
+              const existingFoodPlaces = existingOptions.filter(place => place.kind === "food");
+              
+              // Get new food places from search results
+              const newFoodPlaces = newPlaces.filter(place => place.kind === "food");
+              
+              // Create updated stay with new options - new places at the start
+              const updatedStay = {
+                ...this._stay,
+                options: [...newFoodPlaces, ...existingFoodPlaces, ...nonFoodPlaces]
+              };
+              
+              // Update the stay in the trip state using its ID
+              TripState.update(this._stay.id, updatedStay);
+              
+              // Save the updated trip data
+              TripState.saveTrip();
+            }
+            
+            // Remove loading indicator
+            if (loadingIndicator && loadingIndicator.parentNode) {
+              loadingIndicator.parentNode.removeChild(loadingIndicator);
+            }
+          } catch (error) {
+            console.error('Error searching for food places:', error);
+          }
+        }
+      });
+    }
+  }
+  
+  /**
+   * Handle the place-delete event from a place-card
+   * @param {CustomEvent} event The place-delete event
+   */
+  _handlePlaceDelete(event) {
+    const place = event.detail.place;
+    
+    if (!place || !place.id || !this._stay || !this._stay.options) return;
+    
+    // Filter out the place with the matching ID
+    const updatedOptions = this._stay.options.filter(option => option.id !== place.id);
+    
+    // Create an updated stay object
+    const updatedStay = {
+      ...this._stay,
+      options: updatedOptions
+    };
+    
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+    
+    // Save the updated trip data
+    TripState.saveTrip();
+  }
+  
+  /**
+   * Handle the day-delete event from a day-plan
+   * @param {CustomEvent} event The day-delete event
+   */
+  _handleDayDelete(event) {
+    const { date, activities } = event.detail;
+    
+    if (!date || !this._stay || !this._stay.day_plans) return;
+    
+    // Get the beginning of the day in seconds
+    const dayStart = new Date(date * 1000).setHours(0, 0, 0, 0) / 1000;
+    const dayEnd = new Date(date * 1000).setHours(23, 59, 59, 999) / 1000;
+    
+    // Filter out all activities for this day
+    const updatedDayPlans = this._stay.day_plans.filter(plan => {
+      return plan.start_time < dayStart || plan.start_time > dayEnd;
+    });
+    
+    // Create an updated stay object
+    const updatedStay = {
+      ...this._stay,
+      day_plans: updatedDayPlans
+    };
+    
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+    
+    // Save the updated trip data
+    TripState.saveTrip();
+  }
+  
+  /**
+   * Handle the plan-delete event from a plan-item
+   * @param {CustomEvent} event The plan-delete event
+   */
+  _handlePlanDelete(event) {
+    const { plan } = event.detail;
+    
+    if (!plan || !plan.id || !this._stay || !this._stay.day_plans) return;
+    
+    // Filter out the plan with the matching ID
+    const updatedDayPlans = this._stay.day_plans.filter(item => {
+      // Check if the item has an ID and it doesn't match the plan ID
+      return !item.id || item.id !== plan.id;
+    });
+    
+    // Create an updated stay object
+    const updatedStay = {
+      ...this._stay,
+      day_plans: updatedDayPlans
+    };
+    
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+    
+    // Save the updated trip data
+    TripState.saveTrip();
   }
 }
 

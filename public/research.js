@@ -44,16 +44,19 @@ const defaultObjectProvider = "openai";
 // Mapping of models for each provider
 const modelMap = {
   openai: {
+    object: "gpt-4o-2024-08-06",
     fast: "gpt-4.1-nano-2025-04-14",
     standard: "gpt-4.1-mini-2025-04-14",
     best: "gpt-4.1",
   },
   anthropic: {
+    object: "claude-3-5-sonnet-20241022",
     fast: "claude-3-5-haiku-20241022",
     standard: "claude-3-5-sonnet-20241022",
     best: "claude-3-7-sonnet-latest",
   },
   google: {
+    object: "gemini-2.0-flash",
     fast: "gemini-2.0-flash",
     standard: "gemini-2.5-flash-preview-04-17",
     best: "gemini-2.5-pro-preview-05-06",
@@ -61,7 +64,7 @@ const modelMap = {
 };
 
 const defaultModel = `${defaultProvider}:${modelMap[defaultProvider]["standard"]}`;
-const defaultObjectModel = `${defaultObjectProvider}:${modelMap[defaultObjectProvider]["fast"]}`;
+const defaultObjectModel = `${defaultObjectProvider}:${modelMap[defaultObjectProvider]["object"]}`;
 
 // Initialize providers with the proxy url and server side env var interpolation strings
 // https://ai-sdk.dev/docs/reference/ai-sdk-core/provider-registry
@@ -201,6 +204,10 @@ const placeSchema = {
   description:
     "A specific location, like a venue, hotel, park, restaurant, etc. that the user may want to visit",
   properties: {
+    id: {
+      type: "string",
+      description: "Unique identifier for the place",
+    },
     kind: {
       type: "string",
       enum: [
@@ -340,6 +347,10 @@ const planSchema = {
   description:
     "A time-sensitive activity associated with a place, like a concert, hotel check-in, or plan to go to a museum",
   properties: {
+    id: {
+      type: "string",
+      description: "Unique identifier for the plan",
+    },
     // Schedule properties
     start_time: scheduleSchema.properties.start_time,
     end_time: scheduleSchema.properties.end_time,
@@ -361,6 +372,10 @@ const transportationSchema = {
   type: "object",
   description: "Plans for getting around",
   properties: {
+    id: {
+      type: "string",
+      description: "Unique identifier for the transportation",
+    },
     // Schedule properties
     start_time: scheduleSchema.properties.start_time,
     end_time: scheduleSchema.properties.end_time,
@@ -461,6 +476,10 @@ const staySchema = {
   type: "object",
   description: "Travel stay with plans for a destination",
   properties: {
+    id: {
+      type: "string",
+      description: "Unique identifier for the stay",
+    },
     destination: destinationSchema,
     description: {
       type: "string",
@@ -499,6 +518,10 @@ const staySchema = {
 
 // Main Trip Schema
 const tripSchema = {
+  id: {
+    type: "string",
+    description: "Unique identifier for the trip",
+  },
   title: "Trip Schema",
   description:
     "Schema for planning a detailed trip with destinations, accommodations, activities, and transportation",
@@ -916,6 +939,7 @@ ${JSON.stringify(research, null, 2)}
       stays.slice(0, count).map(async (stay) => {
         try {
           return {
+            id: crypto.randomUUID(),
             ...stay,
             options: await getPlaceResearch(message, stay.destination),
           };
@@ -1198,6 +1222,7 @@ async function getPlaceInfo(placeName, address = "") {
 
     // Final place object
     const place = {
+      id: crypto.randomUUID(),
       kind,
       name: placeData.name,
       category: placeData.category.length > 0 ? placeData.category : null,
@@ -1229,6 +1254,7 @@ async function getPlaceInfo(placeName, address = "") {
 
     // Return a minimal place object if there's an error
     return {
+      id: crypto.randomUUID(),
       kind: "visit",
       name: placeName,
       category: null,
@@ -1335,9 +1361,11 @@ ${JSON.stringify(research, null, 2)}
       places.slice(0, count).map(async (place) => {
         try {
           return {
+            id: crypto.randomUUID(),
             ...place,
             ...(await getPlaceInfo(place.name, place.address)),
             destination,
+            description: place.description,
           };
         } catch (error) {
           console.error("Error in getPlaceResearch:", error);

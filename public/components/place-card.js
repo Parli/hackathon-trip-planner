@@ -68,6 +68,7 @@ class PlaceCard extends HTMLElement {
 
   _handleInterestClick(event) {
     const target = event.target;
+    
     if (target.classList.contains("interest-button")) {
       const interest = target.dataset.interest;
       this.interest = interest;
@@ -82,6 +83,17 @@ class PlaceCard extends HTMLElement {
         new CustomEvent("interest-change", {
           detail: {
             interest,
+            place: this._place,
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    } else if (target.classList.contains("delete-button")) {
+      // Dispatch a delete event
+      this.dispatchEvent(
+        new CustomEvent("place-delete", {
+          detail: {
             place: this._place,
           },
           bubbles: true,
@@ -131,7 +143,7 @@ class PlaceCard extends HTMLElement {
     const budgetDisplay = budget
       ? budget.charAt(0).toUpperCase() + budget.slice(1)
       : "N/A";
-    const categoryDisplay = category ? category.join(", ") : "";
+    const categoryDisplay = category?.[0] ?? "";
     const ratingDisplay = rating ? `${rating}/10` : "No rating";
     const placeholderImage = "/images/no-image.jpg";
     const imageUrl = photos?.[0] ?? placeholderImage;
@@ -213,6 +225,21 @@ class PlaceCard extends HTMLElement {
           display: flex;
           gap: 0.5rem;
         }
+        
+        .delete-button {
+          background-color: #f44336;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 0.3rem 0.6rem;
+          cursor: pointer;
+          font-size: 0.8rem;
+          transition: background-color 0.2s;
+        }
+        
+        .delete-button:hover {
+          background-color: #d32f2f;
+        }
 
         .interest-button {
           padding: 0.3rem 0.6rem;
@@ -284,6 +311,7 @@ class PlaceCard extends HTMLElement {
               }"
               data-interest="must_do">Must Do</button>
           </div>
+          <button class="delete-button" data-action="delete">Delete</button>
         </div>
       </div>
     `;

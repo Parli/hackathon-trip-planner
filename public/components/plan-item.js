@@ -13,7 +13,16 @@ class PlanItem extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._plan = null;
+    this._handleDeleteClick = this._handleDeleteClick.bind(this);
     this.render();
+  }
+  
+  connectedCallback() {
+    this.shadowRoot.addEventListener('click', this._handleDeleteClick);
+  }
+  
+  disconnectedCallback() {
+    this.shadowRoot.removeEventListener('click', this._handleDeleteClick);
   }
 
   get plan() {
@@ -70,11 +79,30 @@ class PlanItem extends HTMLElement {
         .container {
           display: flex;
           align-items: flex-start;
+          position: relative;
         }
 
         .content {
           flex-grow: 1;
           margin-right: 1rem;
+        }
+        
+        .delete-button {
+          position: absolute;
+          top: 5px;
+          right: 5px;
+          background-color: #f44336;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 0.2rem 0.4rem;
+          cursor: pointer;
+          font-size: 0.7rem;
+          transition: background-color 0.2s;
+        }
+        
+        .delete-button:hover {
+          background-color: #d32f2f;
         }
 
         .header {
@@ -172,8 +200,30 @@ class PlanItem extends HTMLElement {
         </div>
 
         <img class="image" src="${placeholderImage}" alt="${location.name}">
+        <button class="delete-button" data-action="delete-plan">Delete</button>
       </div>
     `;
+  }
+  
+  /**
+   * Handle clicks on the delete button
+   * @param {Event} event The click event
+   */
+  _handleDeleteClick(event) {
+    const target = event.target;
+    
+    if (target.dataset.action === 'delete-plan') {
+      // Dispatch a plan-delete event with the plan data
+      this.dispatchEvent(
+        new CustomEvent("plan-delete", {
+          detail: {
+            plan: this._plan
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    }
   }
 }
 
