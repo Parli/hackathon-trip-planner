@@ -75,14 +75,29 @@ class StayMap extends HTMLElement {
 
     // Add day plans
     if (this._stay.day_plans && this._stay.day_plans.length > 0) {
-      this._stay.day_plans.forEach((plan) => {
+      // Sort day plans by start time to ensure consistent ordering
+      const sortedPlans = [...this._stay.day_plans].sort((a, b) => a.start_time - b.start_time);
+      
+      // Get arrival time to calculate day index
+      const arrivalTime = this._stay.arrival_time || 0;
+      
+      // Calculate day boundaries - each day is 24 hours (86400 seconds)
+      const dayLengthInSeconds = 86400;
+      
+      sortedPlans.forEach((plan) => {
         if (
           plan.kind === "plan" &&
           plan.location &&
           plan.location.coordinates &&
           plan.location.coordinates.latitude &&
-          plan.location.coordinates.longitude
+          plan.location.coordinates.longitude &&
+          plan.start_time
         ) {
+          // Calculate day index based on start_time relative to arrival_time
+          // Day 0 is the arrival day
+          const secondsSinceArrival = plan.start_time - arrivalTime;
+          const dayNum = Math.floor(secondsSinceArrival / dayLengthInSeconds);
+          
           locations.push({
             type: "plan",
             name: plan.location.name,
@@ -90,6 +105,7 @@ class StayMap extends HTMLElement {
             coordinates: plan.location.coordinates,
             startTime: plan.start_time,
             endTime: plan.end_time,
+            dayNum: dayNum >= 0 ? dayNum : null,
             item: plan,
           });
         }
@@ -155,7 +171,7 @@ class StayMap extends HTMLElement {
     // Add buffer (about 20% of the range, with a minimum buffer of 0.02 degrees)
     const latRange = bounds.maxLat - bounds.minLat;
     const lngRange = bounds.maxLng - bounds.minLng;
-    
+
     // If there's only one point or points are very close, ensure a minimum buffer
     const latBuffer = Math.max(latRange * 0.2, 0.02);
     const lngBuffer = Math.max(lngRange * 0.2, 0.02);
@@ -277,7 +293,7 @@ class StayMap extends HTMLElement {
           maxZoom: 14, // Reduced max zoom to show more context
         }
       );
-      
+
       // Force map to recalculate size to ensure proper fit
       setTimeout(() => {
         this._map.invalidateSize();
@@ -313,7 +329,7 @@ class StayMap extends HTMLElement {
       const marker = Leaflet.marker(
         [location.coordinates.latitude, location.coordinates.longitude],
         {
-          icon: this._createIcon(location.type, location.kind),
+          icon: this._createIcon(location.type, location.kind, location.dayNum),
         }
       ).addTo(this._map);
 
@@ -353,6 +369,11 @@ class StayMap extends HTMLElement {
             <div class="popup-info">
               <h3>${location.name}</h3>
               ${
+                location.type === "plan" && location.dayNum !== null
+                  ? `<p class="popup-day">Day ${location.dayNum + 1}</p>`
+                  : ""
+              }
+              ${
                 place.description
                   ? `<p class="popup-description">${place.description.substring(
                       0,
@@ -370,6 +391,11 @@ class StayMap extends HTMLElement {
           <div class="popup-content">
             <div class="popup-info">
               <h3>${location.name}</h3>
+              ${
+                location.type === "plan" && location.dayNum !== null
+                  ? `<p class="popup-day">Day ${location.dayNum + 1}</p>`
+                  : ""
+              }
               ${
                 place && place.description
                   ? `<p class="popup-description">${place.description.substring(
@@ -393,34 +419,51 @@ class StayMap extends HTMLElement {
    * Create a custom icon for the marker type
    * @param {string} type Type of location ('option', 'plan')
    * @param {string} kind Kind of place ('food', 'activity', etc.)
+   * @param {number|null} dayNum Day number for plan items
    * @returns {L.Icon} Leaflet icon object
    * @private
    */
-  _createIcon(type, kind = "") {
-    // Default icon
-    let iconUrl =
-      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png";
+  _createIcon(type, kind = "", dayNum = null) {
+    // Base path for marker icons
+    const basePath = "/images/map/";
 
-    // Different colors for different types
-    if (type === "plan") {
-      iconUrl =
-        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png";
-    } else if (type === "option") {
-      if (kind === "food") {
-        iconUrl =
-          "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png";
+    let iconColor = "blue.png";
+
+    // For options, use grey
+    if (type === "option") {
+      iconColor = "grey.png";
+    }
+    // For plan items, color by day number
+    else if (type === "plan") {
+      // Color palette for days
+      const dayColors = [
+        "red.png", // Day 0
+        "blue.png", // Day 1
+        "purple.png", // Day 2
+        "green.png", // Day 3
+        "teal.png", // Day 4
+        "orange.png", // Day 5
+        "magenta.png", // Day 6
+        "yellow.png", // Day 7
+      ];
+
+      // If we have a valid day number, use it to select color (with cycling if more than 8 days)
+      if (dayNum !== null && dayNum !== undefined) {
+        const colorIndex = dayNum % dayColors.length;
+        iconColor = dayColors[colorIndex];
       } else {
-        iconUrl =
-          "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png";
+        // Default to blue if no day number
+        iconColor = "blue.png";
       }
     }
 
+    // Construct full URL for the icon
+    const iconUrl = `${basePath}${iconColor}`;
+
     return Leaflet.icon({
       iconUrl: iconUrl,
-      shadowUrl:
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
+      iconSize: [16, 20],
+      iconAnchor: [8, 10],
       popupAnchor: [1, -34],
       shadowSize: [41, 41],
     });
@@ -476,9 +519,27 @@ class StayMap extends HTMLElement {
           font-size: 0.8rem;
         }
 
-        .plan-color { background-color: #0a0; }
-        .food-color { background-color: #f80; }
-        .option-color { background-color: #cc0; }
+        /* Day colors matching the markers */
+        .day0-color { background-color: #e03131; } /* red */
+        .day1-color { background-color: #1971c2; } /* blue */
+        .day2-color { background-color: #7048e8; } /* purple */
+        .day3-color { background-color: #2f9e44; } /* green */
+        .day4-color { background-color: #0ca678; } /* teal */
+        .day5-color { background-color: #e8590c; } /* orange */
+        .day6-color { background-color: #d6336c; } /* magenta */
+        .day7-color { background-color: #f08c00; } /* yellow */
+        .option-color { background-color: #868e96; } /* grey */
+
+        .legend-title {
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+
+        .legend-separator {
+          height: 1px;
+          background-color: #ddd;
+          margin: 8px 0;
+        }
 
         /* Popup styles */
         .popup-content {
@@ -513,6 +574,17 @@ class StayMap extends HTMLElement {
           margin: 0 0 6px;
           font-size: 14px;
           color: #333;
+        }
+
+        .popup-day {
+          font-weight: bold;
+          color: #333;
+          font-size: 14px;
+          margin-bottom: 6px;
+          padding: 2px 6px;
+          border-radius: 4px;
+          display: inline-block;
+          background-color: #f0f0f0;
         }
 
         .popup-description {
@@ -967,17 +1039,46 @@ class StayMap extends HTMLElement {
       </div>
 
       <div class="legend">
+        <!-- Plan markers by day -->
+        <div class="legend-title">Days</div>
         <div class="legend-item">
-          <div class="legend-color plan-color"></div>
-          <div class="legend-text">Planned Activity</div>
+          <div class="legend-color day0-color"></div>
+          <div class="legend-text">Day 1</div>
         </div>
         <div class="legend-item">
-          <div class="legend-color food-color"></div>
-          <div class="legend-text">Food Option</div>
+          <div class="legend-color day1-color"></div>
+          <div class="legend-text">Day 2</div>
         </div>
+        <div class="legend-item">
+          <div class="legend-color day2-color"></div>
+          <div class="legend-text">Day 3</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color day3-color"></div>
+          <div class="legend-text">Day 4</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color day4-color"></div>
+          <div class="legend-text">Day 5</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color day5-color"></div>
+          <div class="legend-text">Day 6</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color day6-color"></div>
+          <div class="legend-text">Day 7</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color day7-color"></div>
+          <div class="legend-text">Day 8</div>
+        </div>
+
+        <!-- Options -->
+        <div class="legend-separator"></div>
         <div class="legend-item">
           <div class="legend-color option-color"></div>
-          <div class="legend-text">Activity Option</div>
+          <div class="legend-text">Options</div>
         </div>
       </div>
     `;
