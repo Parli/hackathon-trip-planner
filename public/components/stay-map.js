@@ -118,10 +118,10 @@ class StayMap extends HTMLElement {
         const lat = this._stay.destination.coordinates.latitude;
         const lng = this._stay.destination.coordinates.longitude;
         return {
-          minLat: lat - 0.01,
-          maxLat: lat + 0.01,
-          minLng: lng - 0.01,
-          maxLng: lng + 0.01,
+          minLat: lat - 0.05, // Increased buffer (approximately 5km)
+          maxLat: lat + 0.05,
+          minLng: lng - 0.05,
+          maxLng: lng + 0.05,
         };
       }
 
@@ -152,9 +152,13 @@ class StayMap extends HTMLElement {
       bounds.maxLng = Math.max(bounds.maxLng, lng);
     });
 
-    // Add buffer (about 10% of the range)
-    const latBuffer = (bounds.maxLat - bounds.minLat) * 0.1;
-    const lngBuffer = (bounds.maxLng - bounds.minLng) * 0.1;
+    // Add buffer (about 20% of the range, with a minimum buffer of 0.02 degrees)
+    const latRange = bounds.maxLat - bounds.minLat;
+    const lngRange = bounds.maxLng - bounds.minLng;
+    
+    // If there's only one point or points are very close, ensure a minimum buffer
+    const latBuffer = Math.max(latRange * 0.2, 0.02);
+    const lngBuffer = Math.max(lngRange * 0.2, 0.02);
 
     return {
       minLat: bounds.minLat - latBuffer,
@@ -203,10 +207,10 @@ class StayMap extends HTMLElement {
 
             // Create custom bounds around the city coordinates for better zoom
             const cityBounds = {
-              minLat: centerLat - 0.01, // Approximately 1km buffer
-              maxLat: centerLat + 0.01,
-              minLng: centerLng - 0.01,
-              maxLng: centerLng + 0.01,
+              minLat: centerLat - 0.05, // Increased buffer (approximately 5km)
+              maxLat: centerLat + 0.05,
+              minLng: centerLng - 0.05,
+              maxLng: centerLng + 0.05,
             };
 
             // Create the map with the city coordinates and bounds
@@ -269,13 +273,29 @@ class StayMap extends HTMLElement {
           [bounds.maxLat, bounds.maxLng],
         ],
         {
-          padding: [50, 50], // Add padding around the bounds
-          maxZoom: 15, // Limit how far it can zoom in
+          padding: [100, 100], // Increased padding around the bounds
+          maxZoom: 14, // Reduced max zoom to show more context
         }
       );
+      
+      // Force map to recalculate size to ensure proper fit
+      setTimeout(() => {
+        this._map.invalidateSize();
+        // Re-fit bounds after invalidation to ensure proper display
+        this._map.fitBounds(
+          [
+            [bounds.minLat, bounds.minLng],
+            [bounds.maxLat, bounds.maxLng],
+          ],
+          {
+            padding: [100, 100],
+            maxZoom: 14,
+          }
+        );
+      }, 100);
     } else {
       // If no bounds provided but we have a center, ensure we're at a reasonable zoom level
-      this._map.setZoom(13); // City-level zoom
+      this._map.setZoom(12); // Slightly wider city-level zoom
     }
   }
 
