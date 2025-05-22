@@ -33,12 +33,12 @@ import * as TripState from "/state.js";
 })();
 
 // Add event listeners for state changes
-TripState.addEventListener('trip-updated', (tripData) => {
+TripState.addEventListener("trip-updated", (tripData) => {
   // Re-render trip when data is updated
   renderTrip(tripData);
 });
 
-TripState.addEventListener('trip-error', (error) => {
+TripState.addEventListener("trip-error", (error) => {
   console.error("Trip state error:", error);
 });
 
@@ -103,36 +103,36 @@ function renderTrip(trip) {
  */
 function addStayToTrip(stay) {
   const searchResults = document.getElementById("searchResults");
-  
+
   try {
     // Get current trip data
     const tripData = TripState.getTrip();
-    
+
     // Check if this stay already exists in the trip by comparing destinations
     const existingStay = tripData.stays.find(
       (existingStay) =>
         existingStay.destination.city === stay.destination.city &&
         existingStay.destination.country === stay.destination.country
     );
-    
+
     if (existingStay) {
       // If the stay already exists, show a message
       searchResults.innerHTML = `<p>Destination ${stay.destination.city}, ${stay.destination.country} is already in your itinerary.</p>`;
       return;
     }
-    
+
     // Add stay to the trip
     const updatedTrip = {
       ...tripData,
-      stays: [...tripData.stays, stay]
+      stays: [...tripData.stays, stay],
     };
-    
+
     // Update the trip state
     TripState.update(tripData.id, updatedTrip);
-    
+
     // Show a success message
     searchResults.innerHTML = `<p>Added ${stay.destination.city}, ${stay.destination.country} to your itinerary!</p>`;
-    
+
     // Save the updated trip data
     TripState.saveTrip();
   } catch (error) {
@@ -148,34 +148,44 @@ let currentSearchResults = [];
 async function handleDestinationSearch(event) {
   event.preventDefault();
 
-  const searchQuery = document.getElementById("searchQuery").value;
+  const searchQuery = document.getElementById("searchQuery");
   const searchResults = document.getElementById("searchResults");
   const cityCarousel = document.getElementById("cityCarousel");
   const stayCarousel = document.getElementById("stayCarousel");
 
   // Show loading state
-  searchResults.innerHTML = "<p>Searching for destinations...</p>";
+  searchResults.innerHTML = "";
   cityCarousel.style.display = "none";
+
+  // Add loading indicator
+  const loadingIndicator = document.createElement("div");
+  loadingIndicator.className = "search-loading-indicator";
+  document.getElementById("searchForm").appendChild(loadingIndicator);
+
+  // Grey out the search input
+  searchQuery.classList.add("loading");
+  searchQuery.disabled = true;
 
   try {
     // Call getStayResearch with the search query
-    const stays = await getStayResearch(searchQuery);
+    const stays = await getStayResearch(searchQuery.value);
 
     // Clear the loading message
     searchResults.innerHTML = "";
 
     // Get current trip data to filter out destinations already in the trip
     const tripData = TripState.getTrip();
-    const existingDestinations = tripData.stays.map(stay => 
-      `${stay.destination.city.toLowerCase()},${stay.destination.country.toLowerCase()}`
+    const existingDestinations = tripData.stays.map(
+      (stay) =>
+        `${stay.destination.city.toLowerCase()},${stay.destination.country.toLowerCase()}`
     );
-    
+
     // Filter out destinations that are already in the trip
-    const filteredStays = stays.filter(stay => {
+    const filteredStays = stays.filter((stay) => {
       const stayKey = `${stay.destination.city.toLowerCase()},${stay.destination.country.toLowerCase()}`;
       return !existingDestinations.includes(stayKey);
     });
-    
+
     // Update current search results
     currentSearchResults = filteredStays;
 
@@ -217,6 +227,21 @@ async function handleDestinationSearch(event) {
     console.error("Error searching for destinations:", error);
     searchResults.innerHTML = `<p class="error">Error: ${error.message}</p>`;
     cityCarousel.style.display = "none";
+  } finally {
+    // Remove loading indicator
+    const loadingIndicator = document.querySelector(
+      ".search-loading-indicator"
+    );
+    if (loadingIndicator && loadingIndicator.parentNode) {
+      loadingIndicator.parentNode.removeChild(loadingIndicator);
+    }
+
+    // Restore search input
+    searchQuery.classList.remove("loading");
+    searchQuery.disabled = false;
+
+    // Clear the search input
+    searchQuery.value = "";
   }
 }
 
@@ -228,20 +253,24 @@ function updateSearchResultsAfterAdd(addedStay) {
   const cityCarousel = document.getElementById("cityCarousel");
   const stayCarousel = document.getElementById("stayCarousel");
   const searchResults = document.getElementById("searchResults");
-  
+
   // Remove the added stay from current results
-  currentSearchResults = currentSearchResults.filter(stay => 
-    !(stay.destination.city === addedStay.destination.city && 
-      stay.destination.country === addedStay.destination.country)
+  currentSearchResults = currentSearchResults.filter(
+    (stay) =>
+      !(
+        stay.destination.city === addedStay.destination.city &&
+        stay.destination.country === addedStay.destination.country
+      )
   );
-  
+
   if (currentSearchResults.length === 0) {
     // Hide carousel if no results left
     cityCarousel.style.display = "none";
-    searchResults.innerHTML = "<p>All destinations added to your itinerary!</p>";
+    searchResults.innerHTML =
+      "<p>All destinations added to your itinerary!</p>";
     return;
   }
-  
+
   // Create new city cards for remaining stays
   const cityCards = currentSearchResults.map((stay) => {
     const card = document.createElement("city-card");
@@ -254,12 +283,12 @@ function updateSearchResultsAfterAdd(addedStay) {
     });
     return card;
   });
-  
+
   // Clear any existing cards
   while (stayCarousel.firstChild) {
     stayCarousel.removeChild(stayCarousel.firstChild);
   }
-  
+
   // Add the updated cards to the carousel
   stayCarousel.cards = cityCards;
 }

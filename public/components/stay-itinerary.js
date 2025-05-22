@@ -338,27 +338,38 @@ class StayItinerary extends HTMLElement {
 
         .search-input {
           padding: 0.75rem 1rem;
+          padding-right: 40px;
           border: 1px solid #ccc;
           border-radius: 8px;
           font-size: 1rem;
           width: 100%;
           box-sizing: border-box;
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          transition: background-color 0.3s, color 0.3s;
         }
 
-        .search-loading {
+        .search-input.loading {
+          background-color: #f5f5f5;
+          color: #888;
+        }
+        
+        .search-loading-indicator {
           position: absolute;
-          top: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          background-color: #f8f8f8;
-          padding: 8px 16px;
-          border-radius: 4px;
-          border: 1px solid #ddd;
-          font-size: 0.9rem;
+          top: 50%;
+          right: 16px;
+          transform: translateY(-50%);
+          width: 20px;
+          height: 20px;
+          border: 2px solid rgba(0, 0, 0, 0.1);
+          border-top: 2px solid #3498db;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
           z-index: 100;
-          margin-top: 8px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        @keyframes spin {
+          0% { transform: translateY(-50%) rotate(0deg); }
+          100% { transform: translateY(-50%) rotate(360deg); }
         }
 
         .section-header {
@@ -484,9 +495,12 @@ class StayItinerary extends HTMLElement {
           try {
             // Show loading indicator
             const loadingIndicator = document.createElement("div");
-            loadingIndicator.textContent = "Searching...";
-            loadingIndicator.className = "search-loading";
+            loadingIndicator.className = "search-loading-indicator";
             placesSearch.parentNode.appendChild(loadingIndicator);
+            
+            // Grey out the search input
+            placesSearch.classList.add("loading");
+            placesSearch.disabled = true;
 
             // Get new places (any kind)
             const newPlaces = await getPlaceResearch(query, destination);
@@ -509,10 +523,16 @@ class StayItinerary extends HTMLElement {
               TripState.saveTrip();
             }
 
-            // Remove loading indicator
+            // Remove loading indicator and restore search input
             if (loadingIndicator && loadingIndicator.parentNode) {
               loadingIndicator.parentNode.removeChild(loadingIndicator);
             }
+            
+            placesSearch.classList.remove("loading");
+            placesSearch.disabled = false;
+            
+            // Clear the search input
+            placesSearch.value = "";
           } catch (error) {
             console.error("Error searching for places:", error);
           }
