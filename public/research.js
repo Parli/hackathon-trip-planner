@@ -275,7 +275,7 @@ const placeSchema = {
     },
     rating: {
       type: ["number", "null"],
-      description: "Rating from 0-10",
+      description: "Rating from 0-5",
     },
     budget: {
       type: ["string", "null"],

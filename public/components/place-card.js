@@ -147,15 +147,11 @@ class PlaceCard extends HTMLElement {
       description,
       photos,
       rating,
-      budget,
       interest_level,
     } = this._place;
 
-    const budgetDisplay = budget
-      ? budget.charAt(0).toUpperCase() + budget.slice(1)
-      : "N/A";
     const categoryDisplay = category?.[0] ?? "";
-    const ratingDisplay = rating ? `${rating}/10` : "No rating";
+    const ratingDisplay = rating ? `${rating}&nbsp;⭐` : "";
     const placeholderImage = "/images/no-image.jpg";
     const imageUrl = photos?.[0] ?? placeholderImage;
 
@@ -263,6 +259,7 @@ class PlaceCard extends HTMLElement {
           font-weight: bold;
           margin: 0 0 0 0.5rem;
           flex-grow: 1;
+          line-height: 1;
         }
 
         .meta {
@@ -342,7 +339,6 @@ class PlaceCard extends HTMLElement {
         <div class="meta">
           <span class="category">${categoryDisplay}</span>
           <span class="rating">${ratingDisplay}</span>
-          <span class="budget">${budgetDisplay}</span>
         </div>
 
         <div class="description">${description}</div>
