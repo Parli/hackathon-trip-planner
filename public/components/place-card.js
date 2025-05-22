@@ -162,7 +162,9 @@ class PlaceCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: block;
+          display: flex;
+          flex-direction: column;
+          height: 100%;
           border: 1px solid #ddd;
           border-radius: 8px;
           overflow: hidden;
@@ -181,6 +183,7 @@ class PlaceCard extends HTMLElement {
           width: 100%;
           height: 180px;
           position: relative;
+          flex-shrink: 0;
         }
 
         .action-buttons {
@@ -228,6 +231,9 @@ class PlaceCard extends HTMLElement {
         }
 
         .content {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
           padding: 1rem;
         }
 
@@ -268,6 +274,7 @@ class PlaceCard extends HTMLElement {
         }
 
         .description {
+          flex-grow: 1;
           margin-bottom: 1rem;
           line-height: 1.4;
         }
