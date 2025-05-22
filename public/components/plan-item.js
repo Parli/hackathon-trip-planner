@@ -16,13 +16,13 @@ class PlanItem extends HTMLElement {
     this._handleDeleteClick = this._handleDeleteClick.bind(this);
     this.render();
   }
-  
+
   connectedCallback() {
-    this.shadowRoot.addEventListener('click', this._handleDeleteClick);
+    this.shadowRoot.addEventListener("click", this._handleDeleteClick);
   }
-  
+
   disconnectedCallback() {
-    this.shadowRoot.removeEventListener('click', this._handleDeleteClick);
+    this.shadowRoot.removeEventListener("click", this._handleDeleteClick);
   }
 
   get plan() {
@@ -64,6 +64,7 @@ class PlanItem extends HTMLElement {
 
     const { location, start_time, end_time } = this._plan;
     const placeholderImage = "/images/no-image.jpg";
+    const image = this._plan.location.photos?.[0] ?? placeholderImage;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -86,7 +87,7 @@ class PlanItem extends HTMLElement {
           flex-grow: 1;
           margin-right: 1rem;
         }
-        
+
         .action-buttons {
           position: absolute;
           top: 5px;
@@ -94,7 +95,7 @@ class PlanItem extends HTMLElement {
           display: flex;
           gap: 5px;
         }
-        
+
         .delete-button {
           background-color: #f44336;
           color: white;
@@ -105,11 +106,11 @@ class PlanItem extends HTMLElement {
           font-size: 0.7rem;
           transition: background-color 0.2s;
         }
-        
+
         .delete-button:hover {
           background-color: #d32f2f;
         }
-        
+
         .move-button {
           background-color: #2196F3;
           color: white;
@@ -123,15 +124,15 @@ class PlanItem extends HTMLElement {
           align-items: center;
           justify-content: center;
         }
-        
+
         .move-button:hover {
           background-color: #0b7dda;
         }
-        
+
         .move-up-button::after {
           content: "↑";
         }
-        
+
         .move-down-button::after {
           content: "↓";
         }
@@ -230,7 +231,7 @@ class PlanItem extends HTMLElement {
           </div>
         </div>
 
-        <img class="image" src="${placeholderImage}" alt="${location.name}">
+        <img class="image" src="${image}" alt="${location.name}">
         <div class="action-buttons">
           <button class="move-button move-up-button" data-action="move-up" title="Earlier (-1hr)"></button>
           <button class="move-button move-down-button" data-action="move-down" title="Later (+1hr)"></button>
@@ -239,7 +240,7 @@ class PlanItem extends HTMLElement {
       </div>
     `;
   }
-  
+
   /**
    * Handle clicks on the buttons
    * @param {Event} event The click event
@@ -247,39 +248,39 @@ class PlanItem extends HTMLElement {
   _handleDeleteClick(event) {
     const target = event.target;
     const action = target.dataset.action;
-    
+
     if (!action || !this._plan) return;
-    
-    if (action === 'delete-plan') {
+
+    if (action === "delete-plan") {
       // Dispatch a plan-delete event with the plan data
       this.dispatchEvent(
         new CustomEvent("plan-delete", {
           detail: {
-            plan: this._plan
+            plan: this._plan,
           },
           bubbles: true,
           composed: true,
         })
       );
-    } else if (action === 'move-up') {
+    } else if (action === "move-up") {
       // Dispatch a plan-move event to move the plan up
       this.dispatchEvent(
         new CustomEvent("plan-move", {
           detail: {
             plan: this._plan,
-            direction: 'up'
+            direction: "up",
           },
           bubbles: true,
           composed: true,
         })
       );
-    } else if (action === 'move-down') {
+    } else if (action === "move-down") {
       // Dispatch a plan-move event to move the plan down
       this.dispatchEvent(
         new CustomEvent("plan-move", {
           detail: {
             plan: this._plan,
-            direction: 'down'
+            direction: "down",
           },
           bubbles: true,
           composed: true,
