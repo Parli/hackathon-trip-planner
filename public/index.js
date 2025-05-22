@@ -1,6 +1,29 @@
 // Trip planner form handler
 document.addEventListener("DOMContentLoaded", () => {
   const tripForm = document.getElementById("tripForm");
+  
+  // Add event listener to update trip days when dates change
+  const startDateInput = document.getElementById("startDate");
+  const endDateInput = document.getElementById("endDate");
+  const tripDaysInput = document.getElementById("tripDays");
+  
+  function updateTripDays() {
+    const start = new Date(startDateInput.value);
+    const end = new Date(endDateInput.value);
+    
+    if (start && end && !isNaN(start) && !isNaN(end)) {
+      // Calculate difference in days
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Include both start and end day
+      
+      // Update trip days field
+      tripDaysInput.value = diffDays;
+    }
+  }
+  
+  // Add event listeners
+  startDateInput.addEventListener("change", updateTripDays);
+  endDateInput.addEventListener("change", updateTripDays);
 
   tripForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -11,21 +34,32 @@ document.addEventListener("DOMContentLoaded", () => {
       .replaceAll("+", "-")
       .replaceAll("/", "_");
 
+    // Parse dates from date inputs and update hidden fields
+    const startDate = new Date(document.getElementById("startDate").value);
+    document.getElementById("startYear").value = startDate.getFullYear();
+    document.getElementById("startMonth").value = startDate.getMonth() + 1; // Months are 0-indexed
+    document.getElementById("startDay").value = startDate.getDate();
+    
+    const endDate = new Date(document.getElementById("endDate").value);
+    document.getElementById("endYear").value = endDate.getFullYear();
+    document.getElementById("endMonth").value = endDate.getMonth() + 1;
+    document.getElementById("endDay").value = endDate.getDate();
+    
     // Gather form data
     const tripData = {
       id,
       title: document.getElementById("tripTitle").value,
       timeline: {
         start_date: {
-          year: parseInt(document.getElementById("startYear").value),
-          month: parseInt(document.getElementById("startMonth").value),
-          day: parseInt(document.getElementById("startDay").value),
+          year: startDate.getFullYear(),
+          month: startDate.getMonth() + 1,
+          day: startDate.getDate(),
           flexibility: document.getElementById("startFlexibility").value,
         },
         end_date: {
-          year: parseInt(document.getElementById("endYear").value),
-          month: parseInt(document.getElementById("endMonth").value),
-          day: parseInt(document.getElementById("endDay").value),
+          year: endDate.getFullYear(),
+          month: endDate.getMonth() + 1,
+          day: endDate.getDate(),
           flexibility: document.getElementById("endFlexibility").value,
         },
         trip_days: parseInt(document.getElementById("tripDays").value),

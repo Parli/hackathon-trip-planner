@@ -55,13 +55,14 @@
       font-size: 16px;
     }
 
-    .date-inputs {
-      display: flex;
-      gap: 10px;
+    .flexibility-select {
+      margin-top: 10px;
     }
-
-    .date-inputs div {
-      flex: 1;
+    
+    input[type="date"] {
+      width: 100%;
+      padding: 8px;
+      font-size: 16px;
     }
 
     button[type="submit"] {
@@ -97,55 +98,37 @@
     <div class="form-section">
       <h2>Timeline</h2>
       <div class="form-group">
-        <label>Start Date</label>
-        <div class="date-inputs">
-          <div>
-            <label for="startYear">Year</label>
-            <input type="number" id="startYear" name="startYear" required min="2023" max="2030" value="2025">
-          </div>
-          <div>
-            <label for="startMonth">Month</label>
-            <input type="number" id="startMonth" name="startMonth" required min="1" max="12" value="6">
-          </div>
-          <div>
-            <label for="startDay">Day</label>
-            <input type="number" id="startDay" name="startDay" required min="1" max="31" value="15">
-          </div>
-          <div>
-            <label for="startFlexibility">Flexibility</label>
-            <select id="startFlexibility" name="startFlexibility">
-              <option value="fixed">Fixed</option>
-              <option value="somewhat_flexible" selected>Somewhat Flexible</option>
-              <option value="very_flexible">Very Flexible</option>
-            </select>
-          </div>
+        <label for="startDate">Start Date</label>
+        <input type="date" id="startDate" name="startDate" required value="2025-06-15">
+        <div class="flexibility-select">
+          <label for="startFlexibility">Flexibility</label>
+          <select id="startFlexibility" name="startFlexibility">
+            <option value="fixed">Fixed</option>
+            <option value="somewhat_flexible" selected>Somewhat Flexible</option>
+            <option value="very_flexible">Very Flexible</option>
+          </select>
         </div>
+        <!-- Hidden fields for compatibility -->
+        <input type="hidden" id="startYear" name="startYear" value="2025">
+        <input type="hidden" id="startMonth" name="startMonth" value="6">
+        <input type="hidden" id="startDay" name="startDay" value="15">
       </div>
 
       <div class="form-group">
-        <label>End Date</label>
-        <div class="date-inputs">
-          <div>
-            <label for="endYear">Year</label>
-            <input type="number" id="endYear" name="endYear" required min="2023" max="2030" value="2025">
-          </div>
-          <div>
-            <label for="endMonth">Month</label>
-            <input type="number" id="endMonth" name="endMonth" required min="1" max="12" value="6">
-          </div>
-          <div>
-            <label for="endDay">Day</label>
-            <input type="number" id="endDay" name="endDay" required min="1" max="31" value="30">
-          </div>
-          <div>
-            <label for="endFlexibility">Flexibility</label>
-            <select id="endFlexibility" name="endFlexibility">
-              <option value="fixed">Fixed</option>
-              <option value="somewhat_flexible" selected>Somewhat Flexible</option>
-              <option value="very_flexible">Very Flexible</option>
-            </select>
-          </div>
+        <label for="endDate">End Date</label>
+        <input type="date" id="endDate" name="endDate" required value="2025-06-30">
+        <div class="flexibility-select">
+          <label for="endFlexibility">Flexibility</label>
+          <select id="endFlexibility" name="endFlexibility">
+            <option value="fixed">Fixed</option>
+            <option value="somewhat_flexible" selected>Somewhat Flexible</option>
+            <option value="very_flexible">Very Flexible</option>
+          </select>
         </div>
+        <!-- Hidden fields for compatibility -->
+        <input type="hidden" id="endYear" name="endYear" value="2025">
+        <input type="hidden" id="endMonth" name="endMonth" value="6">
+        <input type="hidden" id="endDay" name="endDay" value="30">
       </div>
 
       <div class="form-group">
