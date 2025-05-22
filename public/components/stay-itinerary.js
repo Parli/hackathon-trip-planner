@@ -332,28 +332,33 @@ class StayItinerary extends HTMLElement {
         }
 
         .search-container {
-          margin-left: auto;
+          width: 100%;
           position: relative;
         }
 
         .search-input {
-          padding: 0.5rem;
+          padding: 0.75rem 1rem;
           border: 1px solid #ccc;
-          border-radius: 4px;
-          font-size: 0.9rem;
-          width: 200px;
+          border-radius: 8px;
+          font-size: 1rem;
+          width: 100%;
+          box-sizing: border-box;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .search-loading {
           position: absolute;
-          top: 35px;
-          right: 0;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
           background-color: #f8f8f8;
-          padding: 5px 10px;
+          padding: 8px 16px;
           border-radius: 4px;
           border: 1px solid #ddd;
-          font-size: 0.8rem;
+          font-size: 0.9rem;
           z-index: 100;
+          margin-top: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .section-header {
@@ -400,34 +405,14 @@ class StayItinerary extends HTMLElement {
       <h1 class="title">${cityName}</h1>
 
       <div class="section">
-        <div class="section-title">
-          <span class="section-icon">🎭</span>
-          <span>Things to Do</span>
-          <div class="search-container">
-            <input type="text" id="activities-search" placeholder="Search for activities..." class="search-input">
-          </div>
+        <div class="search-container">
+          <input type="text" id="places-search" placeholder="Search for places in ${cityName}${destination.country ? ', ' + destination.country : ''}" class="search-input">
         </div>
 
         ${
-          activityPlaces.length > 0
-            ? '<card-carousel id="activities-carousel"></card-carousel>'
-            : '<div class="empty-state">No activities available for this destination yet</div>'
-        }
-      </div>
-
-      <div class="section">
-        <div class="section-title">
-          <span class="section-icon">🍽️</span>
-          <span>Food Places</span>
-          <div class="search-container">
-            <input type="text" id="food-search" placeholder="Search for restaurants..." class="search-input">
-          </div>
-        </div>
-
-        ${
-          foodPlaces.length > 0
-            ? '<card-carousel id="food-carousel"></card-carousel>'
-            : '<div class="empty-state">No food places available for this destination yet</div>'
+          options && options.length > 0
+            ? '<card-carousel id="places-carousel"></card-carousel>'
+            : '<div class="empty-state">No places available for this destination yet</div>'
         }
       </div>
 
@@ -455,31 +440,18 @@ class StayItinerary extends HTMLElement {
       </div>
     `;
 
-    // Create and populate place cards for activities carousel
-    if (activityPlaces.length > 0) {
-      const activitiesCarousel = this.shadowRoot.getElementById(
-        "activities-carousel"
+    // Create and populate place cards for the combined places carousel
+    if (options && options.length > 0) {
+      const placesCarousel = this.shadowRoot.getElementById(
+        "places-carousel"
       );
-      if (activitiesCarousel) {
-        const activityCards = activityPlaces.map((place) => {
+      if (placesCarousel) {
+        const placeCards = options.map((place) => {
           const card = document.createElement("place-card");
           card.place = place;
           return card;
         });
-        activitiesCarousel.cards = activityCards;
-      }
-    }
-
-    // Create and populate place cards for food carousel
-    if (foodPlaces.length > 0) {
-      const foodCarousel = this.shadowRoot.getElementById("food-carousel");
-      if (foodCarousel) {
-        const foodCards = foodPlaces.map((place) => {
-          const card = document.createElement("place-card");
-          card.place = place;
-          return card;
-        });
-        foodCarousel.cards = foodCards;
+        placesCarousel.cards = placeCards;
       }
     }
 
@@ -500,15 +472,13 @@ class StayItinerary extends HTMLElement {
       addDayButton.addEventListener("click", this._handleAddDay);
     }
 
-    // Add event listeners for search inputs
-    const activitiesSearch =
-      this.shadowRoot.getElementById("activities-search");
-    const foodSearch = this.shadowRoot.getElementById("food-search");
+    // Add event listener for places search input
+    const placesSearch = this.shadowRoot.getElementById("places-search");
 
-    if (activitiesSearch) {
-      activitiesSearch.addEventListener("keypress", async (e) => {
-        if (e.key === "Enter" && activitiesSearch.value.trim()) {
-          const query = activitiesSearch.value.trim();
+    if (placesSearch) {
+      placesSearch.addEventListener("keypress", async (e) => {
+        if (e.key === "Enter" && placesSearch.value.trim()) {
+          const query = placesSearch.value.trim();
           const destination = this._stay.destination;
 
           try {
@@ -516,39 +486,20 @@ class StayItinerary extends HTMLElement {
             const loadingIndicator = document.createElement("div");
             loadingIndicator.textContent = "Searching...";
             loadingIndicator.className = "search-loading";
-            activitiesSearch.parentNode.appendChild(loadingIndicator);
+            placesSearch.parentNode.appendChild(loadingIndicator);
 
-            // Get new activities
+            // Get new places (any kind)
             const newPlaces = await getPlaceResearch(query, destination);
 
             // Update the underlying data structure
             if (newPlaces.length > 0 && this._stay) {
               // Get existing options
               const existingOptions = this._stay.options || [];
-
-              // Get food places from existing options
-              const foodPlaces = existingOptions.filter(
-                (place) => place.kind === "food"
-              );
-
-              // Get existing non-food places
-              const existingNonFoodPlaces = existingOptions.filter(
-                (place) => place.kind !== "food"
-              );
-
-              // Get new non-food places from search results
-              const newNonFoodPlaces = newPlaces.filter(
-                (place) => place.kind !== "food"
-              );
-
-              // Create updated stay with new options - new places at the start
+              
+              // Create updated stay with new options at the start
               const updatedStay = {
                 ...this._stay,
-                options: [
-                  ...newNonFoodPlaces,
-                  ...existingNonFoodPlaces,
-                  ...foodPlaces,
-                ],
+                options: [...newPlaces, ...existingOptions],
               };
 
               // Update the stay in the trip state using its ID
@@ -563,71 +514,7 @@ class StayItinerary extends HTMLElement {
               loadingIndicator.parentNode.removeChild(loadingIndicator);
             }
           } catch (error) {
-            console.error("Error searching for activities:", error);
-          }
-        }
-      });
-    }
-
-    if (foodSearch) {
-      foodSearch.addEventListener("keypress", async (e) => {
-        if (e.key === "Enter" && foodSearch.value.trim()) {
-          const query = foodSearch.value.trim();
-          const destination = this._stay.destination;
-
-          try {
-            // Show loading indicator
-            const loadingIndicator = document.createElement("div");
-            loadingIndicator.textContent = "Searching...";
-            loadingIndicator.className = "search-loading";
-            foodSearch.parentNode.appendChild(loadingIndicator);
-
-            // Get new food places
-            const newPlaces = await getPlaceResearch(query, destination);
-
-            // Update the underlying data structure
-            if (newPlaces.length > 0 && this._stay) {
-              // Get existing options
-              const existingOptions = this._stay.options || [];
-
-              // Get non-food places from existing options
-              const nonFoodPlaces = existingOptions.filter(
-                (place) => place.kind !== "food"
-              );
-
-              // Get existing food places
-              const existingFoodPlaces = existingOptions.filter(
-                (place) => place.kind === "food"
-              );
-
-              // Get new food places from search results
-              const newFoodPlaces = newPlaces.filter(
-                (place) => place.kind === "food"
-              );
-
-              // Create updated stay with new options - new places at the start
-              const updatedStay = {
-                ...this._stay,
-                options: [
-                  ...newFoodPlaces,
-                  ...existingFoodPlaces,
-                  ...nonFoodPlaces,
-                ],
-              };
-
-              // Update the stay in the trip state using its ID
-              TripState.update(this._stay.id, updatedStay);
-
-              // Save the updated trip data
-              TripState.saveTrip();
-            }
-
-            // Remove loading indicator
-            if (loadingIndicator && loadingIndicator.parentNode) {
-              loadingIndicator.parentNode.removeChild(loadingIndicator);
-            }
-          } catch (error) {
-            console.error("Error searching for food places:", error);
+            console.error("Error searching for places:", error);
           }
         }
       });
