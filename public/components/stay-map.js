@@ -469,6 +469,7 @@ class StayMap extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
+          position: relative;
           display: block;
           width: 100%;
           height: 100%;
@@ -491,11 +492,15 @@ class StayMap extends HTMLElement {
         }
 
         .legend {
+          position: absolute;
           background: white;
           padding: 10px;
           border-radius: 4px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           margin-top: 10px;
+          bottom: 0;
+          left: 0;
+          z-index: 100000;
         }
 
         .legend-item {
@@ -1036,7 +1041,6 @@ class StayMap extends HTMLElement {
 
       <div class="legend">
         <!-- Plan markers by day -->
-        <div class="legend-title">Days</div>
         <div class="legend-item">
           <div class="legend-color day0-color"></div>
           <div class="legend-text">Day 1</div>
@@ -1074,7 +1078,7 @@ class StayMap extends HTMLElement {
         <div class="legend-separator"></div>
         <div class="legend-item">
           <div class="legend-color option-color"></div>
-          <div class="legend-text">Options</div>
+          <div class="legend-text">Places</div>
         </div>
       </div>
     `;
