@@ -15,7 +15,9 @@
       color: #333;
     }
 
-    h1, h2, h3 {
+    h1,
+    h2,
+    h3 {
       color: #222;
     }
 
@@ -24,7 +26,6 @@
       border-radius: 8px;
       padding: 20px;
       margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .trip-header h1 {
@@ -40,13 +41,15 @@
       font-size: 16px;
     }
 
-    .trip-dates, .trip-preferences {
+    .trip-dates,
+    .trip-preferences {
       display: flex;
       flex-wrap: wrap;
       gap: 15px;
     }
 
-    .trip-dates span, .trip-preferences span {
+    .trip-dates span,
+    .trip-preferences span {
       background-color: #e8f4f8;
       padding: 5px 12px;
       border-radius: 20px;
@@ -58,7 +61,6 @@
       border-radius: 8px;
       padding: 20px;
       margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .destination-search h2 {
@@ -79,15 +81,15 @@
       border: 1px solid #ddd;
       border-radius: 8px;
       font-size: 16px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       transition: background-color 0.3s, color 0.3s;
     }
-    
+
     #searchQuery.loading {
       background-color: #f5f5f5;
       color: #888;
     }
-    
+
     .search-loading-indicator {
       position: absolute;
       top: 50%;
@@ -101,10 +103,15 @@
       animation: spin 1s linear infinite;
       z-index: 100;
     }
-    
+
     @keyframes spin {
-      0% { transform: translateY(-50%) rotate(0deg); }
-      100% { transform: translateY(-50%) rotate(360deg); }
+      0% {
+        transform: translateY(-50%) rotate(0deg);
+      }
+
+      100% {
+        transform: translateY(-50%) rotate(360deg);
+      }
     }
 
     button {
@@ -125,7 +132,6 @@
       background-color: #ffffff;
       border-radius: 8px;
       padding: 20px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .trip-itinerary h2 {
@@ -183,7 +189,6 @@
   <!-- Trip Content -->
   <div id="tripContent" style="display: none;">
     <div class="trip-header">
-      <h1 id="tripTitle"></h1>
       <div class="trip-meta">
         <div class="trip-dates">
           <span id="tripDates"></span>
@@ -197,7 +202,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="destination-search">
       <h2>Find Destinations</h2>
       <form id="searchForm">
@@ -208,16 +213,15 @@
         <card-carousel id="stayCarousel"></card-carousel>
       </div>
     </div>
-    
+
     <div class="trip-itinerary">
-      <h2>Your Itinerary</h2>
       <div id="itineraryContent">
         <p id="emptyItineraryMessage">No destinations added yet. Search for a destination above to get started.</p>
         <trip-itinerary style="display: none;"></trip-itinerary>
       </div>
     </div>
   </div>
-  
+
   <script type="module" src="/components/city-card.js"></script>
   <script type="module" src="/components/trip-itinerary.js"></script>
   <script type="module" src="/trip.js"></script>

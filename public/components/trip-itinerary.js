@@ -49,7 +49,7 @@ class TripItinerary extends HTMLElement {
     if (stay.arrival_time) {
       return stay.arrival_time;
     }
-    
+
     // If no arrival_time, check day plans
     if (stay.day_plans && stay.day_plans.length > 0) {
       // Find the earliest start_time among all day plans
@@ -58,31 +58,31 @@ class TripItinerary extends HTMLElement {
         const planDate = new Date(plan.start_time * 1000);
         planDate.setHours(0, 0, 0, 0);
         const dayTimestamp = planDate.getTime() / 1000;
-        
+
         return dayTimestamp < earliest ? dayTimestamp : earliest;
       }, Infinity);
     }
-    
+
     // If neither arrival_time nor day_plans, return Infinity to sort to the end
     return Infinity;
   }
-  
+
   _getSortedStays(stays) {
     if (!stays || stays.length === 0) {
       return [];
     }
-    
+
     // Create a copy with timestamp for sorting
-    const staysWithDates = stays.map(stay => ({
+    const staysWithDates = stays.map((stay) => ({
       stay,
-      timestamp: this._getStayTimestamp(stay)
+      timestamp: this._getStayTimestamp(stay),
     }));
-    
+
     // Sort by timestamp (stays with no timestamp will be at the end)
     staysWithDates.sort((a, b) => a.timestamp - b.timestamp);
-    
+
     // Return just the sorted stays
-    return staysWithDates.map(item => item.stay);
+    return staysWithDates.map((item) => item.stay);
   }
 
   render() {
@@ -110,7 +110,7 @@ class TripItinerary extends HTMLElement {
           font-family: Arial, sans-serif;
           max-width: 1200px;
           margin: 0 auto;
-          padding: 2rem;
+          padding: 0;
         }
 
         .header {

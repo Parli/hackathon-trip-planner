@@ -178,12 +178,17 @@ class PlaceCard extends HTMLElement {
         }
 
         .action-buttons {
+          visibility: hidden;
           position: absolute;
           top: 10px;
           right: 10px;
           z-index: 1000;
           display: flex;
           gap: 8px;
+        }
+
+        .container:hover .action-buttons {
+          visibility: visible;
         }
 
         .add-button, .delete-button {
@@ -267,7 +272,6 @@ class PlaceCard extends HTMLElement {
 
         .description {
           flex-grow: 1;
-          margin-bottom: 1rem;
           line-height: 1.4;
         }
 
@@ -317,44 +321,46 @@ class PlaceCard extends HTMLElement {
           font-weight: bold;
         }
       </style>
-      <div class="image-wrapper">
-        <div class="action-buttons">
-          <button class="add-button" title="Add to plan">+</button>
-          <button class="delete-button" title="Delete">×</button>
-        </div>
-        <image-container image="${imageUrl}" alt="${name}"></image-container>
-      </div>
-
-      <div class="content">
-        <div class="header">
-          <place-icon kind="${kind}"></place-icon>
-          <h3 class="title">${name}</h3>
+      <div class="container">
+        <div class="image-wrapper">
+          <div class="action-buttons">
+            <button class="add-button" title="Add to plan">+</button>
+            <button class="delete-button" title="Delete">×</button>
+          </div>
+          <image-container image="${imageUrl}" alt="${name}"></image-container>
         </div>
 
-        <div class="meta">
-          <span class="category">${categoryDisplay}</span>
-          <span class="rating">${ratingDisplay}</span>
-        </div>
+        <div class="content">
+          <div class="header">
+            <place-icon kind="${kind}"></place-icon>
+            <h3 class="title">${name}</h3>
+          </div>
 
-        <div class="description">${description}</div>
+          <div class="meta">
+            <span class="category">${categoryDisplay}</span>
+            <span class="rating">${ratingDisplay}</span>
+          </div>
 
-        <div class="actions">
-          <div class="interest-buttons">
-            <button
-              class="interest-button ${
-                interest_level === "maybe" ? "active" : ""
-              }"
-              data-interest="maybe">Maybe</button>
-            <button
-              class="interest-button ${
-                interest_level === "interested" ? "active" : ""
-              }"
-              data-interest="interested">Interested</button>
-            <button
-              class="interest-button ${
-                interest_level === "must_do" ? "active" : ""
-              }"
-              data-interest="must_do">Must Do</button>
+          <div class="description">${description}</div>
+
+          <div class="actions">
+            <div class="interest-buttons">
+              <button
+                class="interest-button ${
+                  interest_level === "maybe" ? "active" : ""
+                }"
+                data-interest="maybe">Maybe</button>
+              <button
+                class="interest-button ${
+                  interest_level === "interested" ? "active" : ""
+                }"
+                data-interest="interested">Interested</button>
+              <button
+                class="interest-button ${
+                  interest_level === "must_do" ? "active" : ""
+                }"
+                data-interest="must_do">Must Do</button>
+            </div>
           </div>
         </div>
       </div>

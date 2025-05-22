@@ -34,19 +34,19 @@ import * as TripState from "/state.js";
 
 // Function to preserve scroll position by fixing container height during renders
 function preserveHeightDuringRender(callback) {
-  const itineraryContent = document.getElementById('itineraryContent');
-  
+  const itineraryContent = document.getElementById("itineraryContent");
+
   if (itineraryContent) {
     // Get and set the current height of the container
     const currentHeight = itineraryContent.offsetHeight;
     itineraryContent.style.height = `${currentHeight}px`;
-    
+
     // Call the callback function (render)
     callback();
-    
+
     // Reset the height after a short delay to allow rendering to complete
     setTimeout(() => {
-      itineraryContent.style.height = '';
+      itineraryContent.style.height = "";
     }, 0);
   } else {
     // If container not found, just call the callback
@@ -82,7 +82,6 @@ function renderTrip(trip) {
   };
 
   // Populate trip content
-  document.getElementById("tripTitle").textContent = trip.title;
   document.getElementById("tripDates").textContent = `Dates: ${formatDate(
     trip.timeline.start_date
   )} - ${formatDate(trip.timeline.end_date)}`;

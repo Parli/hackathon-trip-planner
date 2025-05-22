@@ -45,9 +45,10 @@ class CardCarousel extends HTMLElement {
    */
   next() {
     const container = this.shadowRoot.querySelector(".carousel-container");
-    const cardWidth = this.shadowRoot.querySelector(".carousel-card")?.offsetWidth || 300;
+    const cardWidth =
+      this.shadowRoot.querySelector(".carousel-card")?.offsetWidth || 300;
     const visibleCards = Math.floor(container.offsetWidth / cardWidth);
-    
+
     if (this._currentIndex < this._cards.length - visibleCards) {
       this._currentIndex++;
       this._scrollToIndex();
@@ -69,14 +70,15 @@ class CardCarousel extends HTMLElement {
    */
   _scrollToIndex() {
     const container = this.shadowRoot.querySelector(".carousel-container");
-    const cardWidth = this.shadowRoot.querySelector(".carousel-card")?.offsetWidth || 300;
+    const cardWidth =
+      this.shadowRoot.querySelector(".carousel-card")?.offsetWidth || 300;
     const scrollPos = this._currentIndex * cardWidth;
-    
+
     container.scrollTo({
       left: scrollPos,
-      behavior: "smooth"
+      behavior: "smooth",
     });
-    
+
     this._updateControls();
   }
 
@@ -85,18 +87,20 @@ class CardCarousel extends HTMLElement {
    */
   _updateControls() {
     const container = this.shadowRoot.querySelector(".carousel-container");
-    const cardWidth = this.shadowRoot.querySelector(".carousel-card")?.offsetWidth || 300;
+    const cardWidth =
+      this.shadowRoot.querySelector(".carousel-card")?.offsetWidth || 300;
     const visibleCards = Math.floor(container.offsetWidth / cardWidth);
-    
+
     const prevButton = this.shadowRoot.querySelector(".prev-button");
     const nextButton = this.shadowRoot.querySelector(".next-button");
-    
+
     if (prevButton) {
       prevButton.disabled = this._currentIndex <= 0;
     }
-    
+
     if (nextButton) {
-      nextButton.disabled = this._currentIndex >= this._cards.length - visibleCards;
+      nextButton.disabled =
+        this._currentIndex >= this._cards.length - visibleCards;
     }
   }
 
@@ -107,21 +111,21 @@ class CardCarousel extends HTMLElement {
     // Add event listeners after rendering
     const prevButton = this.shadowRoot.querySelector(".prev-button");
     const nextButton = this.shadowRoot.querySelector(".next-button");
-    
+
     if (prevButton) {
       prevButton.addEventListener("click", () => this.previous());
     }
-    
+
     if (nextButton) {
       nextButton.addEventListener("click", () => this.next());
     }
-    
+
     // Add resize observer to update controls when container size changes
     if (!this._resizeObserver) {
       this._resizeObserver = new ResizeObserver(() => {
         this._updateControls();
       });
-      
+
       const container = this.shadowRoot.querySelector(".carousel-container");
       if (container) {
         this._resizeObserver.observe(container);
@@ -134,8 +138,9 @@ class CardCarousel extends HTMLElement {
    */
   _handleScroll() {
     const container = this.shadowRoot.querySelector(".carousel-container");
-    const cardWidth = this.shadowRoot.querySelector(".carousel-card")?.offsetWidth || 300;
-    
+    const cardWidth =
+      this.shadowRoot.querySelector(".carousel-card")?.offsetWidth || 300;
+
     // Update current index based on scroll position
     this._currentIndex = Math.round(container.scrollLeft / cardWidth);
     this._updateControls();
@@ -217,7 +222,7 @@ class CardCarousel extends HTMLElement {
         }
 
         .carousel-button:disabled {
-          opacity: 0.5;
+          opacity: 0;
           cursor: default;
         }
 
@@ -239,10 +244,14 @@ class CardCarousel extends HTMLElement {
         <div class="carousel-container">
           ${
             this._cards.length > 0
-              ? this._cards.map((_, index) => `
+              ? this._cards
+                  .map(
+                    (_, index) => `
                   <div class="carousel-card" id="card-${index}">
                   </div>
-                `).join("")
+                `
+                  )
+                  .join("")
               : '<div class="empty-state">No cards to display</div>'
           }
         </div>

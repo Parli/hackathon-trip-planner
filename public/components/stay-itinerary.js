@@ -42,7 +42,10 @@ class StayItinerary extends HTMLElement {
     this.shadowRoot.addEventListener("plan-move", this._handlePlanMove);
     this.shadowRoot.addEventListener("plan-update", this._handlePlanUpdate);
     this.shadowRoot.addEventListener("day-move", this._handleDayMove);
-    this.shadowRoot.addEventListener("day-date-change", this._handleDayDateChange);
+    this.shadowRoot.addEventListener(
+      "day-date-change",
+      this._handleDayDateChange
+    );
   }
 
   disconnectedCallback() {
@@ -59,7 +62,10 @@ class StayItinerary extends HTMLElement {
     this.shadowRoot.removeEventListener("plan-move", this._handlePlanMove);
     this.shadowRoot.removeEventListener("plan-update", this._handlePlanUpdate);
     this.shadowRoot.removeEventListener("day-move", this._handleDayMove);
-    this.shadowRoot.removeEventListener("day-date-change", this._handleDayDateChange);
+    this.shadowRoot.removeEventListener(
+      "day-date-change",
+      this._handleDayDateChange
+    );
   }
 
   get stay() {
@@ -308,7 +314,7 @@ class StayItinerary extends HTMLElement {
       <style>
         :host {
           display: block;
-          padding: 1rem;
+          padding: 0;
           font-family: Arial, sans-serif;
         }
 
@@ -328,8 +334,9 @@ class StayItinerary extends HTMLElement {
         }
 
         .delete-destination-button {
-          background-color: #f44336;
-          color: white;
+          visibility: hidden;
+          background-color:rgb(230, 230, 230);
+          color: rgb(100, 100, 100);
           border: none;
           border-radius: 50%;
           width: 36px;
@@ -337,25 +344,30 @@ class StayItinerary extends HTMLElement {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 18px;
+          font-size: 1.5rem;
           cursor: pointer;
           transition: background-color 0.2s, transform 0.2s;
           box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
+        .title-container:hover .delete-destination-button {
+          visibility: visible;
+        }
+
         .delete-destination-button:hover {
           background-color: #d32f2f;
           transform: scale(1.1);
+          color: white;
         }
 
         .section {
-          margin-bottom: 2rem;
+          margin-bottom: 1rem;
         }
 
         .section-title {
           font-size: 1.4rem;
           font-weight: bold;
-          margin-bottom: 1rem;
+          margin: 0;
           display: flex;
           align-items: center;
         }
@@ -414,8 +426,8 @@ class StayItinerary extends HTMLElement {
         }
 
         .add-day-button {
-          background-color: #4CAF50;
-          color: white;
+          background-color:rgb(230, 230, 230);
+          color: black;
           border: none;
           border-radius: 4px;
           padding: 0.5rem 1rem;
@@ -425,6 +437,7 @@ class StayItinerary extends HTMLElement {
         }
 
         .add-day-button:hover {
+          color: white;
           background-color: #45a049;
         }
 
@@ -462,17 +475,17 @@ class StayItinerary extends HTMLElement {
         ${
           options && options.length > 0
             ? '<card-carousel id="places-carousel"></card-carousel>'
-            : '<div class="empty-state">No places available for this destination yet</div>'
+            : ""
         }
       </div>
 
       <div class="day-plans-section">
         <div class="section-header">
           <h2 class="section-title">
-            <span class="section-icon">📅</span>
+            <span class="section-icon"></span>
             <span>Daily Plans</span>
           </h2>
-          <button id="add-day-button" class="add-day-button">+ Add New Day</button>
+          <button id="add-day-button" class="add-day-button">+ Add Day</button>
         </div>
         <div class="day-plans">
           ${(() => {
@@ -833,7 +846,7 @@ class StayItinerary extends HTMLElement {
     // Save the updated trip data
     TripState.saveTrip();
   }
-  
+
   /**
    * Handle the plan-update event from a plan-item
    * @param {CustomEvent} event The plan-update event
@@ -841,7 +854,14 @@ class StayItinerary extends HTMLElement {
   _handlePlanUpdate(event) {
     const { oldPlan, newPlan } = event.detail;
 
-    if (!oldPlan || !oldPlan.id || !newPlan || !this._stay || !this._stay.day_plans) return;
+    if (
+      !oldPlan ||
+      !oldPlan.id ||
+      !newPlan ||
+      !this._stay ||
+      !this._stay.day_plans
+    )
+      return;
 
     // Find the index of the plan to update
     const planIndex = this._stay.day_plans.findIndex(
@@ -852,7 +872,7 @@ class StayItinerary extends HTMLElement {
 
     // Create a copy of the day plans
     const updatedDayPlans = [...this._stay.day_plans];
-    
+
     // Update the plan in the day plans array
     updatedDayPlans[planIndex] = newPlan;
 
@@ -1041,41 +1061,40 @@ class StayItinerary extends HTMLElement {
     // Save the updated trip data
     TripState.saveTrip();
   }
-  
+
   /**
    * Handle the day-date-change event from a day-plan
    * @param {CustomEvent} event The day-date-change event
    */
   _handleDayDateChange(event) {
     const { oldDate, newDate, activities, dayDiff } = event.detail;
-    
+
     if (!oldDate || !newDate || !this._stay) return;
-    
-    
+
     // Get the beginning and end of the old day in seconds
     const oldDayStart = oldDate;
     const oldDayEnd = new Date(oldDate * 1000);
     oldDayEnd.setHours(23, 59, 59, 999);
     const oldDayEndTs = Math.floor(oldDayEnd.getTime() / 1000);
-    
+
     // Get the beginning and end of the new day in seconds
     const newDayStart = newDate;
     const newDayEnd = new Date(newDate * 1000);
     newDayEnd.setHours(23, 59, 59, 999);
     const newDayEndTs = Math.floor(newDayEnd.getTime() / 1000);
-    
+
     // Calculate the time shift in seconds
-    const timeShift = (newDate - oldDate);
-    
+    const timeShift = newDate - oldDate;
+
     // Initialize day_plans if it doesn't exist
     if (!this._stay.day_plans) {
       this._stay.day_plans = [];
     }
-    
+
     // Separate day plans into those for this day and other days
     const dayPlans = [];
     const otherDayPlans = [];
-    
+
     this._stay.day_plans.forEach((plan) => {
       if (plan.start_time >= oldDayStart && plan.start_time <= oldDayEndTs) {
         dayPlans.push(plan);
@@ -1083,10 +1102,10 @@ class StayItinerary extends HTMLElement {
         otherDayPlans.push(plan);
       }
     });
-    
+
     // Create a copy of the stay to modify
     let updatedStay = { ...this._stay };
-    
+
     // If there are plans in the day, move them
     if (dayPlans.length > 0) {
       // Create a copy of the day plans to be moved and shift their times
@@ -1096,32 +1115,34 @@ class StayItinerary extends HTMLElement {
         updatedPlan.end_time += timeShift;
         return updatedPlan;
       });
-      
+
       // Combine the moved plans with the other plans
       updatedStay.day_plans = [...otherDayPlans, ...movedDayPlans];
-      
+
       // Update arrival and departure times based on the updated plans
       updatedStay = this._updateStayBoundaries(updatedStay);
     } else {
       // No plans to move, just adjust the stay's arrival/departure times
       // Check if this is the first or last day of the stay
-      const isFirstDay = Math.abs(oldDayStart - this._stay.arrival_time) < 86400;
-      const isLastDay = Math.abs(oldDayEndTs - this._stay.departure_time) < 86400;
-      
+      const isFirstDay =
+        Math.abs(oldDayStart - this._stay.arrival_time) < 86400;
+      const isLastDay =
+        Math.abs(oldDayEndTs - this._stay.departure_time) < 86400;
+
       if (isFirstDay) {
         // Update arrival time
         updatedStay.arrival_time = newDate;
       }
-      
+
       if (isLastDay) {
         // Update departure time to end of the new day
         updatedStay.departure_time = newDayEndTs;
       }
     }
-    
+
     // Update the stay in the trip state
     TripState.update(this._stay.id, updatedStay);
-    
+
     // Save the updated trip data
     TripState.saveTrip();
   }

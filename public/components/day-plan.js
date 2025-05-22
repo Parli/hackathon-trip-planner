@@ -77,7 +77,7 @@ class DayPlan extends HTMLElement {
    */
   _getStartTime() {
     if (!this._date) return null;
-    
+
     const startDate = new Date(this._date * 1000);
     startDate.setHours(0, 0, 0, 0);
     return Math.floor(startDate.getTime() / 1000);
@@ -90,7 +90,7 @@ class DayPlan extends HTMLElement {
    */
   _getEndTime() {
     if (!this._date) return null;
-    
+
     const endDate = new Date(this._date * 1000);
     endDate.setHours(23, 59, 59, 999);
     return Math.floor(endDate.getTime() / 1000);
@@ -103,13 +103,13 @@ class DayPlan extends HTMLElement {
    */
   _getActivities() {
     if (!this._stay || !this._stay.day_plans || !this._date) return [];
-    
+
     const startTime = this._getStartTime();
     const endTime = this._getEndTime();
-    
+
     // Filter day_plans to only include plans for this day
-    return this._stay.day_plans.filter(plan => 
-      plan.start_time >= startTime && plan.start_time <= endTime
+    return this._stay.day_plans.filter(
+      (plan) => plan.start_time >= startTime && plan.start_time <= endTime
     );
   }
 
@@ -120,7 +120,7 @@ class DayPlan extends HTMLElement {
    */
   _hasTransportation() {
     const activities = this._getActivities();
-    return activities.some(activity => activity.kind === "transportation");
+    return activities.some((activity) => activity.kind === "transportation");
   }
 
   /**
@@ -130,14 +130,17 @@ class DayPlan extends HTMLElement {
    */
   _getWeather() {
     if (!this._stay || !this._stay.weather || !this._date) return null;
-    
+
     const startTime = this._getStartTime();
     const endTime = this._getEndTime();
-    
+
     // Find the first weather object for this day
-    return this._stay.weather.find(weather => 
-      weather.start_time >= startTime && weather.start_time <= endTime
-    ) || null;
+    return (
+      this._stay.weather.find(
+        (weather) =>
+          weather.start_time >= startTime && weather.start_time <= endTime
+      ) || null
+    );
   }
 
   /**
@@ -148,10 +151,10 @@ class DayPlan extends HTMLElement {
   _isEmpty() {
     // If no stay or date, consider it empty
     if (!this._stay || !this._date) return true;
-    
+
     // If there are no day_plans in the stay at all, it's empty
     if (!this._stay.day_plans || this._stay.day_plans.length === 0) return true;
-    
+
     // Check if there are any activities for this day
     return this._getActivities().length === 0;
   }
@@ -175,83 +178,83 @@ class DayPlan extends HTMLElement {
 
     return formattedDate;
   }
-  
+
   _getDateValue(timestamp) {
     if (!timestamp) return "";
     const date = new Date(timestamp * 1000);
     // Adjust for local timezone to prevent date shifts
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`; // Format as YYYY-MM-DD
   }
-  
+
   _getTimestampFromDateString(dateString) {
     // Create a new date object from the date string
     // Use UTC parsing to avoid timezone issues
-    const [year, month, day] = dateString.split('-').map(Number);
+    const [year, month, day] = dateString.split("-").map(Number);
     const date = new Date(year, month - 1, day);
     date.setHours(0, 0, 0, 0);
     return Math.floor(date.getTime() / 1000);
   }
-  
+
   _setupDatePicker() {
     if (!this._date) return;
-    
-    const datePicker = this.shadowRoot.querySelector('.date-picker');
-    
+
+    const datePicker = this.shadowRoot.querySelector(".date-picker");
+
     if (datePicker) {
       datePicker.value = this._getDateValue(this._date);
-      datePicker.addEventListener('change', this._handleDateChange);
+      datePicker.addEventListener("change", this._handleDateChange);
     }
   }
-  
+
   _handleDateClick(event) {
     // Check if the click is on the date display
-    if (event.target.classList.contains('date-display')) {
-      const datePicker = this.shadowRoot.querySelector('.date-picker');
+    if (event.target.classList.contains("date-display")) {
+      const datePicker = this.shadowRoot.querySelector(".date-picker");
       if (datePicker) {
         datePicker.showPicker();
       }
     }
   }
-  
+
   _handleDateChange(event) {
     if (!this._date || !this._stay) return;
-    
+
     const newDateValue = event.target.value;
     const newTimestamp = this._getTimestampFromDateString(newDateValue);
-    
+
     // If the date hasn't changed, do nothing
     if (newTimestamp === this._date) return;
-    
+
     // Get the beginning of the old day
     const oldDayStart = new Date(this._date * 1000);
     oldDayStart.setHours(0, 0, 0, 0);
     const oldTimestamp = Math.floor(oldDayStart.getTime() / 1000);
-    
+
     // Get the beginning of the new day
     const newDayStart = new Date(newTimestamp * 1000);
     newDayStart.setHours(0, 0, 0, 0);
     const adjustedNewTimestamp = Math.floor(newDayStart.getTime() / 1000);
-    
+
     // Calculate the difference in days between old and new date
     const dayDiff = Math.round((adjustedNewTimestamp - oldTimestamp) / 86400);
-    
+
     // Update the date property
     this._date = adjustedNewTimestamp;
-    
+
     // Dispatch a day-date-change event
     this.dispatchEvent(
-      new CustomEvent('day-date-change', {
+      new CustomEvent("day-date-change", {
         detail: {
           oldDate: oldTimestamp,
           newDate: adjustedNewTimestamp,
           activities: this._getActivities(),
-          dayDiff: dayDiff
+          dayDiff: dayDiff,
         },
         bubbles: true,
-        composed: true
+        composed: true,
       })
     );
   }
@@ -286,17 +289,13 @@ class DayPlan extends HTMLElement {
       <style>
         :host {
           display: block;
-          margin-bottom: 2rem;
+          margin-bottom: 1rem;
         }
 
         .header {
           display: flex;
           align-items: center;
-          padding: 0.8rem 1rem;
-          background-color: #f0f0f0;
-          border-radius: 8px;
-          margin-bottom: 1rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          padding: 0 0 1rem;
           position: relative;
         }
 
@@ -307,19 +306,29 @@ class DayPlan extends HTMLElement {
           margin-right: 0.8rem;
         }
 
+        .action-buttons {
+          display: flex;
+          visibility: hidden;
+          margin-right: 3px;
+          margin-left: -20px;
+        }
+
+        .header:hover .action-buttons {
+          visibility: visible;
+        }
+
         .day-buttons {
           display: flex;
           flex-direction: column;
-          gap: 2px;
         }
 
         .day-button {
-          background-color: #2196F3;
-          color: white;
+          background-color:white;
+          color: black;
           border: none;
           border-radius: 4px;
-          width: 20px;
-          height: 20px;
+          width: 15px;
+          height: 12px;
           padding: 0;
           cursor: pointer;
           font-size: 0.7rem;
@@ -331,26 +340,31 @@ class DayPlan extends HTMLElement {
 
         .day-button:hover {
           background-color: #0b7dda;
+          color: white;
         }
 
+        .day-button-icon {
+          pointer-events: none;
+          transform: scaleY(0.6666);
+        }
 
         .delete-button {
-          position: absolute;
-          right: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          background-color: #f44336;
-          color: white;
+          background-color:rgb(230, 230, 230);
+          color: black;
           border: none;
-          border-radius: 4px;
-          padding: 0.3rem 0.6rem;
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          padding: 0;
+          margin: 3px;
           cursor: pointer;
-          font-size: 0.8rem;
+          font-size: 1rem;
           transition: background-color 0.2s;
         }
 
         .delete-button:hover {
           background-color: #d32f2f;
+          color: white;
         }
 
         .date {
@@ -359,11 +373,11 @@ class DayPlan extends HTMLElement {
           position: relative;
           cursor: pointer;
         }
-        
+
         .date:hover {
           text-decoration: underline;
         }
-        
+
         .date-picker {
           width: 0;
           height: 0;
@@ -390,7 +404,6 @@ class DayPlan extends HTMLElement {
         .activities {
           display: flex;
           flex-direction: column;
-          gap: 0.5rem;
         }
 
         .empty-state {
@@ -403,14 +416,23 @@ class DayPlan extends HTMLElement {
       </style>
 
       <div class="header">
+        <div class="action-buttons">
+          <button class="delete-button" data-action="delete-day">×</button>
+          <div class="day-buttons">
+            <button class="day-button day-up-button" data-action="day-earlier" title="Move day earlier (-1 day)">
+              <div class="day-button-icon">▲</div>
+            </button>
+            <button class="day-button day-down-button" data-action="day-later" title="Move day later (+1 day)">
+              <div class="day-button-icon">▼</div>
+            </button>
+          </div>
+        </div>
         <div class="date-section">
           <div class="date">
-            <input type="date" class="date-picker" value="${this._getDateValue(this._date)}"/>
+            <input type="date" class="date-picker" value="${this._getDateValue(
+              this._date
+            )}"/>
             <span class="date-display">${dateDisplay}</span>
-          </div>
-          <div class="day-buttons">
-            <button class="day-button day-up-button" data-action="day-earlier" title="Move day earlier (-1 day)">↑</button>
-            <button class="day-button day-down-button" data-action="day-later" title="Move day later (+1 day)">↓</button>
           </div>
         </div>
 
@@ -432,8 +454,6 @@ class DayPlan extends HTMLElement {
             ? `<div class="temp">${this._getTemperatureRange()}</div>`
             : ""
         }
-
-        <button class="delete-button" data-action="delete-day">Delete</button>
       </div>
 
       <div class="activities">
