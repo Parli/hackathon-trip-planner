@@ -998,6 +998,9 @@ class StayItinerary extends HTMLElement {
       this._stay.day_plans = [];
     }
 
+    // Check if this is a single-day stay
+    const isSingleDayStay = this._isSingleDayStay();
+
     // Separate day plans into those for this day and other days
     const dayPlans = [];
     const otherDayPlans = [];
@@ -1026,31 +1029,52 @@ class StayItinerary extends HTMLElement {
       // Combine the moved plans with the other plans
       updatedStay.day_plans = [...otherDayPlans, ...movedDayPlans];
 
-      // Update arrival and departure times based on the updated plans
-      updatedStay = this._updateStayBoundaries(updatedStay);
+      // For single-day stays, ensure both arrival and departure times are updated
+      if (isSingleDayStay) {
+        updatedStay.arrival_time = dayStart + timeShift;
+        
+        // Set departure time to end of the same day
+        const newDayEnd = new Date((dayStart + timeShift) * 1000);
+        newDayEnd.setHours(23, 59, 59, 999);
+        updatedStay.departure_time = Math.floor(newDayEnd.getTime() / 1000);
+      } else {
+        // Update arrival and departure times based on the updated plans
+        updatedStay = this._updateStayBoundaries(updatedStay);
+      }
     } else {
       // No plans to move, just adjust the stay's arrival/departure times
-      if (direction === "earlier") {
-        // Moving day earlier
-        const newDayStart = dayStart + timeShift; // Subtract one day
-
-        // Update arrival time if this affects it
-        if (
-          !updatedStay.arrival_time ||
-          newDayStart < updatedStay.arrival_time
-        ) {
-          updatedStay.arrival_time = newDayStart;
-        }
+      if (isSingleDayStay) {
+        // For single-day stays, move both arrival and departure times together
+        updatedStay.arrival_time = dayStart + timeShift;
+        
+        // Set departure time to end of the same day
+        const newDayEnd = new Date((dayStart + timeShift) * 1000);
+        newDayEnd.setHours(23, 59, 59, 999);
+        updatedStay.departure_time = Math.floor(newDayEnd.getTime() / 1000);
       } else {
-        // Moving day later
-        const newDayEnd = dayEnd + timeShift; // Add one day
+        // Multi-day stay, follow normal behavior
+        if (direction === "earlier") {
+          // Moving day earlier
+          const newDayStart = dayStart + timeShift; // Subtract one day
 
-        // Update departure time if this affects it
-        if (
-          !updatedStay.departure_time ||
-          newDayEnd > updatedStay.departure_time
-        ) {
-          updatedStay.departure_time = newDayEnd;
+          // Update arrival time if this affects it
+          if (
+            !updatedStay.arrival_time ||
+            newDayStart < updatedStay.arrival_time
+          ) {
+            updatedStay.arrival_time = newDayStart;
+          }
+        } else {
+          // Moving day later
+          const newDayEnd = dayEnd + timeShift; // Add one day
+
+          // Update departure time if this affects it
+          if (
+            !updatedStay.departure_time ||
+            newDayEnd > updatedStay.departure_time
+          ) {
+            updatedStay.departure_time = newDayEnd;
+          }
         }
       }
     }
@@ -1060,6 +1084,30 @@ class StayItinerary extends HTMLElement {
 
     // Save the updated trip data
     TripState.saveTrip();
+  }
+  
+  /**
+   * Check if the stay is a single-day stay
+   * @returns {boolean} True if the stay is a single day
+   * @private
+   */
+  _isSingleDayStay() {
+    if (!this._stay || !this._stay.arrival_time || !this._stay.departure_time) {
+      return false;
+    }
+    
+    // Get beginning of arrival day
+    const arrivalDate = new Date(this._stay.arrival_time * 1000);
+    arrivalDate.setHours(0, 0, 0, 0);
+    const arrivalDayStart = Math.floor(arrivalDate.getTime() / 1000);
+    
+    // Get beginning of departure day
+    const departureDate = new Date(this._stay.departure_time * 1000);
+    departureDate.setHours(0, 0, 0, 0);
+    const departureDayStart = Math.floor(departureDate.getTime() / 1000);
+    
+    // Check if arrival and departure are on the same day
+    return arrivalDayStart === departureDayStart;
   }
 
   /**
@@ -1086,6 +1134,9 @@ class StayItinerary extends HTMLElement {
     // Calculate the time shift in seconds
     const timeShift = newDate - oldDate;
 
+    // Check if this is a single-day stay
+    const isSingleDayStay = this._isSingleDayStay();
+
     // Initialize day_plans if it doesn't exist
     if (!this._stay.day_plans) {
       this._stay.day_plans = [];
@@ -1106,37 +1157,60 @@ class StayItinerary extends HTMLElement {
     // Create a copy of the stay to modify
     let updatedStay = { ...this._stay };
 
-    // If there are plans in the day, move them
-    if (dayPlans.length > 0) {
-      // Create a copy of the day plans to be moved and shift their times
-      const movedDayPlans = dayPlans.map((plan) => {
-        const updatedPlan = { ...plan };
-        updatedPlan.start_time += timeShift;
-        updatedPlan.end_time += timeShift;
-        return updatedPlan;
-      });
+    // For single-day stays, always update both arrival and departure times
+    if (isSingleDayStay) {
+      // Set arrival time to beginning of new day
+      updatedStay.arrival_time = newDayStart;
+      
+      // Set departure time to end of new day
+      updatedStay.departure_time = newDayEndTs;
+      
+      // If there are plans in the day, move them
+      if (dayPlans.length > 0) {
+        // Create a copy of the day plans to be moved and shift their times
+        const movedDayPlans = dayPlans.map((plan) => {
+          const updatedPlan = { ...plan };
+          updatedPlan.start_time += timeShift;
+          updatedPlan.end_time += timeShift;
+          return updatedPlan;
+        });
 
-      // Combine the moved plans with the other plans
-      updatedStay.day_plans = [...otherDayPlans, ...movedDayPlans];
-
-      // Update arrival and departure times based on the updated plans
-      updatedStay = this._updateStayBoundaries(updatedStay);
-    } else {
-      // No plans to move, just adjust the stay's arrival/departure times
-      // Check if this is the first or last day of the stay
-      const isFirstDay =
-        Math.abs(oldDayStart - this._stay.arrival_time) < 86400;
-      const isLastDay =
-        Math.abs(oldDayEndTs - this._stay.departure_time) < 86400;
-
-      if (isFirstDay) {
-        // Update arrival time
-        updatedStay.arrival_time = newDate;
+        // Combine the moved plans with the other plans
+        updatedStay.day_plans = [...otherDayPlans, ...movedDayPlans];
       }
+    } else {
+      // Multi-day stay - regular behavior
+      if (dayPlans.length > 0) {
+        // Create a copy of the day plans to be moved and shift their times
+        const movedDayPlans = dayPlans.map((plan) => {
+          const updatedPlan = { ...plan };
+          updatedPlan.start_time += timeShift;
+          updatedPlan.end_time += timeShift;
+          return updatedPlan;
+        });
 
-      if (isLastDay) {
-        // Update departure time to end of the new day
-        updatedStay.departure_time = newDayEndTs;
+        // Combine the moved plans with the other plans
+        updatedStay.day_plans = [...otherDayPlans, ...movedDayPlans];
+
+        // Update arrival and departure times based on the updated plans
+        updatedStay = this._updateStayBoundaries(updatedStay);
+      } else {
+        // No plans to move, just adjust the stay's arrival/departure times
+        // Check if this is the first or last day of the stay
+        const isFirstDay =
+          Math.abs(oldDayStart - this._stay.arrival_time) < 86400;
+        const isLastDay =
+          Math.abs(oldDayEndTs - this._stay.departure_time) < 86400;
+
+        if (isFirstDay) {
+          // Update arrival time
+          updatedStay.arrival_time = newDate;
+        }
+
+        if (isLastDay) {
+          // Update departure time to end of the new day
+          updatedStay.departure_time = newDayEndTs;
+        }
       }
     }
 
