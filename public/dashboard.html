@@ -145,6 +145,7 @@
       <div class="tab" data-tab="place">Place Info</div>
       <div class="tab" data-tab="place-research">Place Research</div>
       <div class="tab" data-tab="stay-research">Stay Research</div>
+      <div class="tab" data-tab="coordinates">Coordinates</div>
     </div>
 
     <div id="search-tab" class="tab-content active">
@@ -322,6 +323,25 @@
       <div id="stay-research-result" class="result" style="display: none;">
         <h3>Stay Research Results:</h3>
         <div id="stay-research-result-content"></div>
+      </div>
+    </div>
+
+    <div id="coordinates-tab" class="tab-content">
+      <h2>Test Coordinates Location</h2>
+      <div class="form-group">
+        <label for="coordinates-latitude">Latitude:</label>
+        <input type="text" id="coordinates-latitude" placeholder="Enter latitude (e.g., 40.7128)">
+      </div>
+      <div class="form-group">
+        <label for="coordinates-longitude">Longitude:</label>
+        <input type="text" id="coordinates-longitude" placeholder="Enter longitude (e.g., -74.0060)">
+      </div>
+      <button id="coordinates-button">Get Location</button>
+      <div id="coordinates-loading" class="loading" style="display: none;">Retrieving location data...</div>
+      <div id="coordinates-error" class="error" style="display: none;"></div>
+      <div id="coordinates-result" class="result" style="display: none;">
+        <h3>Location Data:</h3>
+        <pre id="coordinates-result-json"></pre>
       </div>
     </div>
   </div>

@@ -239,4 +239,43 @@ async function getHistoricWeather(coordinates, startDate, endDate) {
   }
 }
 
-export { getSearch, getHistoricWeather };
+/**
+ * Gets location information from coordinates using HERE API
+ * @param {{latitude:number,longitude:number}} coordinates - Object containing latitude and longitude
+ * @returns {Promise<Destination>} - Returns a Promise that resolves to a Destination object
+ */
+async function getCoordinatesLocation({ latitude, longitude }) {
+  try {
+    // Create the API URL with query parameters
+    const url =
+      `/api/proxy/https://revgeocode.search.hereapi.com/v1/revgeocode?` +
+      `at=${latitude},${longitude}&` +
+      `apiKey=\${HERE_API_KEY}&limit=1&show=countryInfo,streetInfo`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `HERE API error: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const result = await response.json();
+    showUpdate(`📍 Location retrieved`);
+    const address = result.items[0]?.address;
+
+    return {
+      neighborhood: address.district ?? null,
+      city: address.city ?? null,
+      state: (address.countryCode === "USA" && address.stateCode) || null,
+      country: address.countryName ?? null,
+      region: null,
+    };
+  } catch (error) {
+    showUpdate(`❌ Location lookup failed`);
+    console.error("Error in getCoordinatesLocation:", error);
+    throw error;
+  }
+}
+
+export { getSearch, getHistoricWeather, getCoordinatesLocation };

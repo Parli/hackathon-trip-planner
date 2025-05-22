@@ -1,5 +1,5 @@
 // Dashboard for testing the research and search functionality
-import { getSearch, getHistoricWeather } from "/search.js";
+import { getSearch, getHistoricWeather, getCoordinatesLocation } from "/search.js";
 import {
   getQueryPlan,
   getPageContent,
@@ -548,6 +548,48 @@ stayResearchForm.button.addEventListener("click", async () => {
     stayResearchForm.error.style.display = "block";
   } finally {
     stayResearchForm.loading.style.display = "none";
+  }
+});
+
+// Coordinates Location tab functionality
+const coordinatesForm = {
+  latitude: document.getElementById("coordinates-latitude"),
+  longitude: document.getElementById("coordinates-longitude"),
+  button: document.getElementById("coordinates-button"),
+  loading: document.getElementById("coordinates-loading"),
+  error: document.getElementById("coordinates-error"),
+  result: document.getElementById("coordinates-result"),
+  resultJSON: document.getElementById("coordinates-result-json"),
+};
+
+coordinatesForm.button.addEventListener("click", async () => {
+  const latitude = parseFloat(coordinatesForm.latitude.value);
+  const longitude = parseFloat(coordinatesForm.longitude.value);
+
+  if (isNaN(latitude) || isNaN(longitude)) {
+    coordinatesForm.error.textContent =
+      "Please enter valid latitude and longitude coordinates";
+    coordinatesForm.error.style.display = "block";
+    return;
+  }
+
+  try {
+    // Hide previous results and show loading
+    coordinatesForm.result.style.display = "none";
+    coordinatesForm.error.style.display = "none";
+    coordinatesForm.loading.style.display = "block";
+
+    // Get location data from coordinates
+    const result = await getCoordinatesLocation({ latitude, longitude });
+
+    // Display results
+    coordinatesForm.resultJSON.textContent = formatJSON(result);
+    coordinatesForm.result.style.display = "block";
+  } catch (error) {
+    coordinatesForm.error.textContent = `Error: ${error.message}`;
+    coordinatesForm.error.style.display = "block";
+  } finally {
+    coordinatesForm.loading.style.display = "none";
   }
 });
 
