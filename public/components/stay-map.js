@@ -466,6 +466,34 @@ class StayMap extends HTMLElement {
   }
 
   render() {
+    // Get the maximum day number from all day plans
+    let maxDayNum = -1;
+    if (this._stay && this._stay.day_plans && this._stay.day_plans.length > 0) {
+      const arrivalTime = this._stay.arrival_time || 0;
+      const dayLengthInSeconds = 86400;
+
+      this._stay.day_plans.forEach((plan) => {
+        if (plan.kind === "plan" && plan.start_time) {
+          const secondsSinceArrival = plan.start_time - arrivalTime;
+          const dayNum = Math.floor(secondsSinceArrival / dayLengthInSeconds);
+          if (dayNum > maxDayNum) {
+            maxDayNum = dayNum;
+          }
+        }
+      });
+    }
+
+    // Generate the day legend items based on actual days used in plans
+    let dayLegendItems = "";
+    for (let i = 0; i <= Math.max(maxDayNum, 0); i++) {
+      dayLegendItems += `
+        <div class="legend-item">
+          <div class="legend-color day${i}-color"></div>
+          <div class="legend-text">Day ${i + 1}</div>
+        </div>
+      `;
+    }
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -521,15 +549,16 @@ class StayMap extends HTMLElement {
         }
 
         /* Day colors matching the markers */
-        .day0-color { background-color: #e03131; } /* red */
-        .day1-color { background-color: #1971c2; } /* blue */
-        .day2-color { background-color: #7048e8; } /* purple */
-        .day3-color { background-color: #2f9e44; } /* green */
-        .day4-color { background-color: #0ca678; } /* teal */
-        .day5-color { background-color: #e8590c; } /* orange */
-        .day6-color { background-color: #d6336c; } /* magenta */
-        .day7-color { background-color: #f08c00; } /* yellow */
-        .option-color { background-color: #868e96; } /* grey */
+
+        .day0-color { background-color: #F05E5E; } /* red */
+        .day1-color { background-color: #4F5AD2; } /* blue */
+        .day2-color { background-color: #882AAD; } /* purple */
+        .day3-color { background-color: #4FC37B; } /* green */
+        .day4-color { background-color: #2AA0AD; } /* teal */
+        .day5-color { background-color: #E99637; } /* orange */
+        .day6-color { background-color: #AD2A86; } /* magenta */
+        .day7-color { background-color: #D0D01F; } /* yellow */
+        .option-color { background-color: #828282; } /* grey */
 
         .legend-title {
           font-weight: bold;
@@ -1041,38 +1070,7 @@ class StayMap extends HTMLElement {
 
       <div class="legend">
         <!-- Plan markers by day -->
-        <div class="legend-item">
-          <div class="legend-color day0-color"></div>
-          <div class="legend-text">Day 1</div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color day1-color"></div>
-          <div class="legend-text">Day 2</div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color day2-color"></div>
-          <div class="legend-text">Day 3</div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color day3-color"></div>
-          <div class="legend-text">Day 4</div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color day4-color"></div>
-          <div class="legend-text">Day 5</div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color day5-color"></div>
-          <div class="legend-text">Day 6</div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color day6-color"></div>
-          <div class="legend-text">Day 7</div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color day7-color"></div>
-          <div class="legend-text">Day 8</div>
-        </div>
+        ${dayLegendItems}
 
         <!-- Options -->
         <div class="legend-separator"></div>
