@@ -10,6 +10,8 @@
 import "./day-plan.js";
 import "./place-card.js";
 import "./card-carousel.js";
+import "./stay-map.js";
+import "./modal-dialog.js";
 import { getPlaceResearch } from "/research.js";
 import * as TripState from "/state.js";
 
@@ -28,6 +30,7 @@ class StayItinerary extends HTMLElement {
     this._handlePlanUpdate = this._handlePlanUpdate.bind(this);
     this._handleDayDateChange = this._handleDayDateChange.bind(this);
     this._updateStayBoundaries = this._updateStayBoundaries.bind(this);
+    this._handleMapButtonClick = this._handleMapButtonClick.bind(this);
     this.render();
   }
 
@@ -328,13 +331,25 @@ class StayItinerary extends HTMLElement {
         }
 
         .title {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          column-gap: 10px;
+        }
+
+        .title-text {
           font-size: 1.8rem;
           font-weight: bold;
           margin: 0;
         }
 
+        .title-buttons {
+          display: flex;
+          gap: 8px;
+        }
+
+        .map-button,
         .delete-destination-button {
-          visibility: hidden;
           background-color:rgb(230, 230, 230);
           color: rgb(100, 100, 100);
           border: none;
@@ -350,8 +365,18 @@ class StayItinerary extends HTMLElement {
           box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
+        .delete-destination-button {
+          visibility: hidden;
+        }
+
         .title-container:hover .delete-destination-button {
           visibility: visible;
+        }
+
+        .map-button:hover {
+          background-color: #2196F3;
+          transform: scale(1.1);
+          color: white;
         }
 
         .delete-destination-button:hover {
@@ -461,9 +486,18 @@ class StayItinerary extends HTMLElement {
       </style>
 
       <div class="title-container">
-        <h1 class="title">${cityName}</h1>
-        <button class="delete-destination-button" title="Delete destination">×</button>
+        <div class="title">
+          <h1 class="title-text">${cityName}</h1>
+          <button class="map-button" title="View on map">🗺️</button>
+        </div>
+        <div class="title-buttons">
+          <button class="delete-destination-button" title="Delete destination">×</button>
+        </div>
       </div>
+
+      <modal-dialog id="map-modal">
+        <stay-map id="stay-map"></stay-map>
+      </modal-dialog>
 
       <div class="section">
         <div class="search-container">
@@ -573,6 +607,12 @@ class StayItinerary extends HTMLElement {
       });
     }
 
+    // Add event listener for map button
+    const mapButton = this.shadowRoot.querySelector(".map-button");
+    if (mapButton) {
+      mapButton.addEventListener("click", this._handleMapButtonClick);
+    }
+
     // Add event listener for places search input
     const placesSearch = this.shadowRoot.getElementById("places-search");
 
@@ -628,6 +668,35 @@ class StayItinerary extends HTMLElement {
           }
         }
       });
+    }
+  }
+
+  /**
+   * Handle click on the map button to open the map modal
+   * @param {Event} event Click event
+   * @private
+   */
+  _handleMapButtonClick(event) {
+    const mapModal = this.shadowRoot.getElementById("map-modal");
+    const stayMap = this.shadowRoot.getElementById("stay-map");
+
+    if (mapModal && stayMap) {
+      // Set the title of the modal
+      mapModal.setTitle(`Map of ${this._stay.destination.city}`);
+
+      // Set the stay data for the map
+      stayMap.stay = this._stay;
+      
+      // Open the modal
+      mapModal.open();
+      
+      // After modal is opened, we need to invalidate the map size
+      // to ensure proper rendering since the container is now visible
+      setTimeout(() => {
+        if (stayMap._map) {
+          stayMap._map.invalidateSize();
+        }
+      }, 100);
     }
   }
 
@@ -1032,7 +1101,7 @@ class StayItinerary extends HTMLElement {
       // For single-day stays, ensure both arrival and departure times are updated
       if (isSingleDayStay) {
         updatedStay.arrival_time = dayStart + timeShift;
-        
+
         // Set departure time to end of the same day
         const newDayEnd = new Date((dayStart + timeShift) * 1000);
         newDayEnd.setHours(23, 59, 59, 999);
@@ -1046,7 +1115,7 @@ class StayItinerary extends HTMLElement {
       if (isSingleDayStay) {
         // For single-day stays, move both arrival and departure times together
         updatedStay.arrival_time = dayStart + timeShift;
-        
+
         // Set departure time to end of the same day
         const newDayEnd = new Date((dayStart + timeShift) * 1000);
         newDayEnd.setHours(23, 59, 59, 999);
@@ -1085,7 +1154,7 @@ class StayItinerary extends HTMLElement {
     // Save the updated trip data
     TripState.saveTrip();
   }
-  
+
   /**
    * Check if the stay is a single-day stay
    * @returns {boolean} True if the stay is a single day
@@ -1095,17 +1164,17 @@ class StayItinerary extends HTMLElement {
     if (!this._stay || !this._stay.arrival_time || !this._stay.departure_time) {
       return false;
     }
-    
+
     // Get beginning of arrival day
     const arrivalDate = new Date(this._stay.arrival_time * 1000);
     arrivalDate.setHours(0, 0, 0, 0);
     const arrivalDayStart = Math.floor(arrivalDate.getTime() / 1000);
-    
+
     // Get beginning of departure day
     const departureDate = new Date(this._stay.departure_time * 1000);
     departureDate.setHours(0, 0, 0, 0);
     const departureDayStart = Math.floor(departureDate.getTime() / 1000);
-    
+
     // Check if arrival and departure are on the same day
     return arrivalDayStart === departureDayStart;
   }
@@ -1161,10 +1230,10 @@ class StayItinerary extends HTMLElement {
     if (isSingleDayStay) {
       // Set arrival time to beginning of new day
       updatedStay.arrival_time = newDayStart;
-      
+
       // Set departure time to end of new day
       updatedStay.departure_time = newDayEndTs;
-      
+
       // If there are plans in the day, move them
       if (dayPlans.length > 0) {
         // Create a copy of the day plans to be moved and shift their times
