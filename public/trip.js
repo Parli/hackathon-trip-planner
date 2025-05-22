@@ -38,6 +38,13 @@ TripState.addEventListener("trip-updated", (tripData) => {
   renderTrip(tripData);
 });
 
+// Add event listener for stay-deleted events
+document.addEventListener("stay-deleted", (event) => {
+  console.log("Stay deleted event received:", event.detail.stayId);
+  // The state is already updated in the component, just update the UI
+  renderTrip(TripState.getTrip());
+});
+
 TripState.addEventListener("trip-error", (error) => {
   console.error("Trip state error:", error);
 });

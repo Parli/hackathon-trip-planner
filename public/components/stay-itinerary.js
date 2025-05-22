@@ -306,12 +306,40 @@ class StayItinerary extends HTMLElement {
           font-family: Arial, sans-serif;
         }
 
-        .title {
-          font-size: 1.8rem;
-          font-weight: bold;
+        .title-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           margin-bottom: 1rem;
           padding-bottom: 0.5rem;
           border-bottom: 2px solid #333;
+        }
+
+        .title {
+          font-size: 1.8rem;
+          font-weight: bold;
+          margin: 0;
+        }
+
+        .delete-destination-button {
+          background-color: #f44336;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 18px;
+          cursor: pointer;
+          transition: background-color 0.2s, transform 0.2s;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .delete-destination-button:hover {
+          background-color: #d32f2f;
+          transform: scale(1.1);
         }
 
         .section {
@@ -352,7 +380,7 @@ class StayItinerary extends HTMLElement {
           background-color: #f5f5f5;
           color: #888;
         }
-        
+
         .search-loading-indicator {
           position: absolute;
           top: 50%;
@@ -366,7 +394,7 @@ class StayItinerary extends HTMLElement {
           animation: spin 1s linear infinite;
           z-index: 100;
         }
-        
+
         @keyframes spin {
           0% { transform: translateY(-50%) rotate(0deg); }
           100% { transform: translateY(-50%) rotate(360deg); }
@@ -413,11 +441,16 @@ class StayItinerary extends HTMLElement {
         }
       </style>
 
-      <h1 class="title">${cityName}</h1>
+      <div class="title-container">
+        <h1 class="title">${cityName}</h1>
+        <button class="delete-destination-button" title="Delete destination">×</button>
+      </div>
 
       <div class="section">
         <div class="search-container">
-          <input type="text" id="places-search" placeholder="Search for places in ${cityName}${destination.country ? ', ' + destination.country : ''}" class="search-input">
+          <input type="text" id="places-search" placeholder="Search for places in ${cityName}${
+      destination.country ? ", " + destination.country : ""
+    }" class="search-input">
         </div>
 
         ${
@@ -453,9 +486,7 @@ class StayItinerary extends HTMLElement {
 
     // Create and populate place cards for the combined places carousel
     if (options && options.length > 0) {
-      const placesCarousel = this.shadowRoot.getElementById(
-        "places-carousel"
-      );
+      const placesCarousel = this.shadowRoot.getElementById("places-carousel");
       if (placesCarousel) {
         const placeCards = options.map((place) => {
           const card = document.createElement("place-card");
@@ -483,6 +514,46 @@ class StayItinerary extends HTMLElement {
       addDayButton.addEventListener("click", this._handleAddDay);
     }
 
+    // Add event listener for delete destination button
+    const deleteButton = this.shadowRoot.querySelector(
+      ".delete-destination-button"
+    );
+    if (deleteButton) {
+      deleteButton.addEventListener("click", () => {
+        // Confirm before deleting
+        if (
+          confirm(`Are you sure you want to remove ${cityName} from your trip?`)
+        ) {
+          const trip = TripState.getTrip();
+          if (trip && trip.stays) {
+            // Filter out this stay
+            const updatedStays = trip.stays.filter(
+              (stay) => stay.id !== this._stay.id
+            );
+
+            // Update trip
+            const updatedTrip = {
+              ...trip,
+              stays: updatedStays,
+            };
+
+            // Save updated trip
+            TripState.update(trip.id, updatedTrip);
+            TripState.saveTrip();
+
+            // Dispatch event to notify parent components
+            this.dispatchEvent(
+              new CustomEvent("stay-deleted", {
+                bubbles: true,
+                composed: true,
+                detail: { stayId: this._stay.id },
+              })
+            );
+          }
+        }
+      });
+    }
+
     // Add event listener for places search input
     const placesSearch = this.shadowRoot.getElementById("places-search");
 
@@ -497,7 +568,7 @@ class StayItinerary extends HTMLElement {
             const loadingIndicator = document.createElement("div");
             loadingIndicator.className = "search-loading-indicator";
             placesSearch.parentNode.appendChild(loadingIndicator);
-            
+
             // Grey out the search input
             placesSearch.classList.add("loading");
             placesSearch.disabled = true;
@@ -509,7 +580,7 @@ class StayItinerary extends HTMLElement {
             if (newPlaces.length > 0 && this._stay) {
               // Get existing options
               const existingOptions = this._stay.options || [];
-              
+
               // Create updated stay with new options at the start
               const updatedStay = {
                 ...this._stay,
@@ -527,10 +598,10 @@ class StayItinerary extends HTMLElement {
             if (loadingIndicator && loadingIndicator.parentNode) {
               loadingIndicator.parentNode.removeChild(loadingIndicator);
             }
-            
+
             placesSearch.classList.remove("loading");
             placesSearch.disabled = false;
-            
+
             // Clear the search input
             placesSearch.value = "";
           } catch (error) {
