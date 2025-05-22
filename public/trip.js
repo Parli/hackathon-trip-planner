@@ -32,17 +32,39 @@ import * as TripState from "/state.js";
   }
 })();
 
+// Function to preserve scroll position by fixing container height during renders
+function preserveHeightDuringRender(callback) {
+  const itineraryContent = document.getElementById('itineraryContent');
+  
+  if (itineraryContent) {
+    // Get and set the current height of the container
+    const currentHeight = itineraryContent.offsetHeight;
+    itineraryContent.style.height = `${currentHeight}px`;
+    
+    // Call the callback function (render)
+    callback();
+    
+    // Reset the height after a short delay to allow rendering to complete
+    setTimeout(() => {
+      itineraryContent.style.height = '';
+    }, 0);
+  } else {
+    // If container not found, just call the callback
+    callback();
+  }
+}
+
 // Add event listeners for state changes
 TripState.addEventListener("trip-updated", (tripData) => {
   // Re-render trip when data is updated
-  renderTrip(tripData);
+  preserveHeightDuringRender(() => renderTrip(tripData));
 });
 
 // Add event listener for stay-deleted events
 document.addEventListener("stay-deleted", (event) => {
   console.log("Stay deleted event received:", event.detail.stayId);
   // The state is already updated in the component, just update the UI
-  renderTrip(TripState.getTrip());
+  preserveHeightDuringRender(() => renderTrip(TripState.getTrip()));
 });
 
 TripState.addEventListener("trip-error", (error) => {
