@@ -688,7 +688,9 @@ class StayItinerary extends HTMLElement {
       // Set the title of the modal
       mapModal.setTitle(
         `${this._stay.destination.city}${
-          this._stay.destination.city ? `, ${this._stay.destination.city}` : ""
+          this._stay.destination.state
+            ? `, ${this._stay.destination.state}`
+            : ""
         }, ${this._stay.destination.country}`
       );
 
