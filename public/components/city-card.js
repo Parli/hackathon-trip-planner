@@ -112,7 +112,9 @@ class CityCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host {
-          display: block;
+          display: flex;
+          flex-direction: column;
+          height: 100%;
           border-radius: 8px;
           background-color: white;
           box-shadow: 0 2px 8px rgba(0,0,0,0.1);
