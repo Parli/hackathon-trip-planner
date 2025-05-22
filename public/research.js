@@ -1007,7 +1007,6 @@ async function getPlaceInfo(placeName, address = "") {
       const kg = search.knowledgeGraph;
       placeData.name = kg.title || placeName;
       placeData.description = kg.description || "";
-      placeData.category = [kg.type];
       placeData.rating = kg.rating || null;
 
       // Add image from knowledge graph if available
