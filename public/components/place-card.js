@@ -68,7 +68,7 @@ class PlaceCard extends HTMLElement {
 
   _handleInterestClick(event) {
     const target = event.target;
-    
+
     if (target.classList.contains("interest-button")) {
       const interest = target.dataset.interest;
       this.interest = interest;
@@ -100,7 +100,7 @@ class PlaceCard extends HTMLElement {
           composed: true,
         })
       );
-    } else if (target.closest('.image-wrapper') || target.classList.contains('image-wrapper')) {
+    } else if (target.classList.contains("add-button")) {
       // Dispatch an event to add this place to a day plan
       this.dispatchEvent(
         new CustomEvent("place-add-to-plan", {
@@ -180,27 +180,51 @@ class PlaceCard extends HTMLElement {
         .image-wrapper {
           width: 100%;
           height: 180px;
-          cursor: pointer;
           position: relative;
         }
-        
-        .image-wrapper::after {
-          content: "Click to add to plan";
+
+        .action-buttons {
           position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background-color: rgba(0, 0, 0, 0.7);
-          color: white;
-          padding: 5px;
-          font-size: 0.8rem;
-          text-align: center;
-          opacity: 0;
-          transition: opacity 0.2s;
+          top: 10px;
+          right: 10px;
+          z-index: 1000;
+          display: flex;
+          gap: 8px;
         }
-        
-        .image-wrapper:hover::after {
-          opacity: 1;
+
+        .add-button, .delete-button {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-weight: bold;
+          font-size: 18px;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+          transition: transform 0.2s, background-color 0.2s;
+        }
+
+        .add-button {
+          background-color: #4CAF50;
+          color: white;
+        }
+
+        .add-button:hover {
+          background-color: #45a049;
+          transform: scale(1.1);
+        }
+
+        .delete-button {
+          background-color: #f44336;
+          color: white;
+        }
+
+        .delete-button:hover {
+          background-color: #d32f2f;
+          transform: scale(1.1);
         }
 
         .content {
@@ -257,21 +281,8 @@ class PlaceCard extends HTMLElement {
           display: flex;
           gap: 0.5rem;
         }
-        
-        .delete-button {
-          background-color: #f44336;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          padding: 0.3rem 0.6rem;
-          cursor: pointer;
-          font-size: 0.8rem;
-          transition: background-color 0.2s;
-        }
-        
-        .delete-button:hover {
-          background-color: #d32f2f;
-        }
+
+        /* Delete button styling is now with the add-button in the action-buttons section */
 
         .interest-button {
           padding: 0.3rem 0.6rem;
@@ -308,6 +319,10 @@ class PlaceCard extends HTMLElement {
         }
       </style>
       <div class="image-wrapper">
+        <div class="action-buttons">
+          <button class="add-button" title="Add to plan">+</button>
+          <button class="delete-button" title="Delete">×</button>
+        </div>
         <image-container image="${imageUrl}" alt="${name}"></image-container>
       </div>
 
@@ -343,7 +358,6 @@ class PlaceCard extends HTMLElement {
               }"
               data-interest="must_do">Must Do</button>
           </div>
-          <button class="delete-button" data-action="delete">Delete</button>
         </div>
       </div>
     `;
