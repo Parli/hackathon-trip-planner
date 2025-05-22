@@ -38,6 +38,32 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
+    .updater-test-section {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background-color: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+    
+    .updater-test-button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .updater-test-button:hover {
+      background-color: #45a049;
+    }
+    
     .component-group h2 {
       border-bottom: 1px solid #eee;
       padding-bottom: 0.5rem;
@@ -75,6 +101,11 @@
   </header>
 
   <div class="container">
+    <!-- Updater Test Section -->
+    <div class="updater-test-section">
+      <button id="test-updater" class="updater-test-button">Test Update Notifications</button>
+    </div>
+    
     <!-- Icon Components -->
     <div class="component-group">
       <h2>Icon Components</h2>

@@ -1,4 +1,5 @@
 import { getSearch, getHistoricWeather } from "/search.js";
+import { showUpdate } from "/updater.js";
 
 // `ai` Vercel AI SDK https://ai-sdk.dev/docs/
 import {
@@ -604,8 +605,11 @@ User Example: "South east asia chill island vibes, affordable, relaxing, nature 
         type: "string",
       }),
     });
+    showUpdate(`💡 Query planned`);
+
     return queries.slice(0, count);
   } catch (error) {
+    showUpdate(`❌ Query plan failed`);
     console.error("Error in getQueryPlan:", error);
     throw error;
   }
@@ -648,6 +652,8 @@ async function getPageContent(url) {
     // Get the HTML content
     const html = await response.text();
 
+    showUpdate(`📄 Page scraped`);
+
     // Create a DOM parser
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
@@ -675,14 +681,16 @@ async function getPageContent(url) {
     }
 
     // Return the parsed article content
-    return {
+    const result = {
       url,
       siteName: article.siteName || new URL(url).hostname,
       title: article.title,
       content: article.textContent,
       success: true,
     };
+    return result;
   } catch (error) {
+    showUpdate(`❌ Scrape failed`);
     console.error("Error in getPageContent:", error);
     return {
       url,
@@ -712,6 +720,8 @@ async function getRedditContent(url) {
     }
 
     const data = await response.json();
+
+    showUpdate(`📄 Page scraped`);
 
     // Extract post information
     const post = data[0]?.data?.children[0]?.data;
@@ -774,16 +784,18 @@ async function getRedditContent(url) {
     // Add comments to markdown
     markdown += processComments(comments);
 
-    return {
+    const result = {
       url,
       siteName: "Reddit",
       title: post.title,
       content: markdown,
       success: true,
     };
+    return result;
   } catch (error) {
     console.error("Error fetching Reddit content:", error);
 
+    showUpdate(`❌ Scrape failed`);
     // Return error info
     return {
       url,
@@ -865,12 +877,13 @@ async function getResearch(message, { queryCount = 4, resultCount = 5 } = {}) {
  *  that contains relavant information to fulfill the user message
  */
 async function getStayResearch(message, { count = 6 } = {}) {
-  // Get research for finding stays for the user request
-  const research = await getResearch(
-    `${message}\n\nContext: User is looking for trip destinations to stay and visit`,
-    { queryCount: 4, resultCount: 3 }
-  );
-  const systemPrompt = `
+  try {
+    // Get research for finding stays for the user request
+    const research = await getResearch(
+      `${message}\n\nContext: User is looking for trip destinations to stay and visit`,
+      { queryCount: 4, resultCount: 3 }
+    );
+    const systemPrompt = `
 Using the research provided, extract the best travel destinations that meet the user request.
 
 Evaluate each location for whether they are appropriate for the user request.
@@ -886,70 +899,80 @@ Research:
 
 ${JSON.stringify(research, null, 2)}
   `;
-  const { object: stays } = await generateObject({
-    model: registry.languageModel(defaultObjectModel),
-    output: "array",
-    system: systemPrompt,
-    prompt: message,
-    schema: jsonSchema({
-      title: "Destination",
-      type: "object",
-      description: "Destination address and description",
-      properties: {
-        destination: {
-          title: "Destination Schema",
-          type: "object",
-          description:
-            "A city or town destination, some place where it's possible to stay",
-          properties: {
-            city: {
-              type: ["string"],
-              description: "Full city name of the destination",
+    const { object: stays } = await generateObject({
+      model: registry.languageModel(defaultObjectModel),
+      output: "array",
+      system: systemPrompt,
+      prompt: message,
+      schema: jsonSchema({
+        title: "Destination",
+        type: "object",
+        description: "Destination address and description",
+        properties: {
+          destination: {
+            title: "Destination Schema",
+            type: "object",
+            description:
+              "A city or town destination, some place where it's possible to stay",
+            properties: {
+              city: {
+                type: ["string"],
+                description: "Full city name of the destination",
+              },
+              country: {
+                type: ["string"],
+                description: "Full country name of the destination",
+              },
+              region: {
+                type: ["string"],
+                description:
+                  "Best region description of the destination e.g. Europe, South East Asia, Great Lakes",
+              },
             },
-            country: {
-              type: ["string"],
-              description: "Full country name of the destination",
-            },
-            region: {
-              type: ["string"],
-              description:
-                "Best region description of the destination e.g. Europe, South East Asia, Great Lakes",
-            },
+            required: ["city", "country", "region"],
           },
-          required: ["city", "country", "region"],
+          description: {
+            type: "string",
+            description: "Description of the destination",
+          },
         },
-        description: {
-          type: "string",
-          description: "Description of the destination",
-        },
-      },
-      required: ["destination", "description"],
-    }),
-  });
-  console.log(
-    `Found ${stays.length} destinations:`,
-    stays.map(
-      ({ destination }) =>
-        `${destination?.city}, ${destination?.country}, ${destination?.region}`
-    )
-  );
-  console.debug("stays results:", JSON.stringify(stays));
-  return (
-    await Promise.all(
-      stays.slice(0, count).map(async (stay) => {
-        try {
-          return {
-            id: crypto.randomUUID(),
-            ...stay,
-            options: await getPlaceResearch(message, stay.destination),
-          };
-        } catch (error) {
-          console.error("Error in getStayResearch:", error);
-          return null;
-        }
-      })
-    )
-  ).filter(Boolean);
+        required: ["destination", "description"],
+      }),
+    });
+    showUpdate(`🌎 Destinations found`);
+
+    console.log(
+      `Found ${stays.length} destinations:`,
+      stays.map(
+        ({ destination }) =>
+          `${destination?.city}, ${destination?.country}, ${destination?.region}`
+      )
+    );
+    console.debug("stays results:", JSON.stringify(stays));
+
+    const results = (
+      await Promise.all(
+        stays.slice(0, count).map(async (stay) => {
+          try {
+            const result = {
+              id: crypto.randomUUID(),
+              ...stay,
+              options: await getPlaceResearch(message, stay.destination),
+            };
+            return result;
+          } catch (error) {
+            console.error("Error in getStayResearch:", error);
+            return null;
+          }
+        })
+      )
+    ).filter(Boolean);
+
+    return results;
+  } catch (error) {
+    showUpdate(`❌ Destination research failed`);
+    throw error;
+  }
 }
 
 /**
@@ -1249,6 +1272,7 @@ async function getPlaceInfo(placeName, address = "") {
 
     return place;
   } catch (error) {
+    showUpdate(`❌ Place lookup failed`);
     console.error("Error in getPlaceInfo:", error);
 
     // Return a minimal place object if there's an error
@@ -1296,17 +1320,18 @@ async function getPlaceInfo(placeName, address = "") {
  *  that contains relavant information to fulfill the user message
  */
 async function getPlaceResearch(message, destination, { count = 3 } = {}) {
-  // Get research for finding places for the user request
-  const research = await getResearch(
-    `Find places in the destination of ${destination.city}, ${destination.country}
+  try {
+    // Get research for finding places for the user request
+    const research = await getResearch(
+      `Find places in the destination of ${destination.city}, ${destination.country}
 
 Context: User originally looked for destinations based on this query:
 
 ${message}
 `,
-    { queryCount: 2, resultCount: 3 }
-  );
-  const systemPrompt = `
+      { queryCount: 2, resultCount: 3 }
+    );
+    const systemPrompt = `
 Using the research provided, extract the best places to visit based on the user request.
 
 Evaluate each place for whether they are appropriate for the user request.
@@ -1323,56 +1348,66 @@ Research:
 
 ${JSON.stringify(research, null, 2)}
   `;
-  const { object: places } = await generateObject({
-    model: registry.languageModel(defaultObjectModel),
-    output: "array",
-    system: systemPrompt,
-    prompt: message,
-    schema: jsonSchema({
-      title: "Destination",
-      type: "object",
-      description: "Destination address and description",
-      properties: {
-        name: {
-          type: "string",
-          description: "Name of the place",
+    const { object: places } = await generateObject({
+      model: registry.languageModel(defaultObjectModel),
+      output: "array",
+      system: systemPrompt,
+      prompt: message,
+      schema: jsonSchema({
+        title: "Destination",
+        type: "object",
+        description: "Destination address and description",
+        properties: {
+          name: {
+            type: "string",
+            description: "Name of the place",
+          },
+          address: {
+            type: "string",
+            description:
+              "Best available full address of the place including number, street, city, country and zip code if available",
+          },
+          description: {
+            type: "string",
+            description: "Description of the destination",
+          },
         },
-        address: {
-          type: "string",
-          description:
-            "Best available full address of the place including number, street, city, country and zip code if available",
-        },
-        description: {
-          type: "string",
-          description: "Description of the destination",
-        },
-      },
-      required: ["address", "description"],
-    }),
-  });
-  console.log(
-    `Found ${places.length} destinations:`,
-    places.map(({ name }) => `${name}`)
-  );
-  console.debug("places results:", JSON.stringify(places));
-  return (
-    await Promise.all(
-      places.slice(0, count).map(async (place) => {
-        try {
-          return {
-            id: crypto.randomUUID(),
-            ...place,
-            ...(await getPlaceInfo(place.name, place.address)),
-            destination,
-            description: place.description,
-          };
-        } catch (error) {
-          console.error("Error in getPlaceResearch:", error);
-          return null;
-        }
-      })
-    )
-  ).filter(Boolean);
+        required: ["address", "description"],
+      }),
+    });
+    showUpdate(`🏛️ Places found`);
+
+    console.log(
+      `Found ${places.length} destinations:`,
+      places.map(({ name }) => `${name}`)
+    );
+    console.debug("places results:", JSON.stringify(places));
+
+    const results = (
+      await Promise.all(
+        places.slice(0, count).map(async (place) => {
+          try {
+            const result = {
+              id: crypto.randomUUID(),
+              ...place,
+              ...(await getPlaceInfo(place.name, place.address)),
+              destination,
+              description: place.description,
+            };
+            return result;
+          } catch (error) {
+            console.error("Error in getPlaceResearch:", error);
+            return null;
+          }
+        })
+      )
+    ).filter(Boolean);
+
+    return results;
+  } catch (error) {
+    showUpdate(`❌ Place research failed`);
+    throw error;
+  }
 }
 
 export {

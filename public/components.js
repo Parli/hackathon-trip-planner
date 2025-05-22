@@ -12,11 +12,48 @@ import "/components/stay-itinerary.js";
 import "/components/trip-itinerary.js";
 import "/components/card-carousel.js";
 import "/components/image-container.js";
+import { showUpdate } from "/updater.js";
 
 // Current timestamp (for demo purposes)
 const now = Math.floor(Date.now() / 1000);
 const oneHourInSeconds = 60 * 60;
 const oneDayInSeconds = 24 * oneHourInSeconds;
+
+// Add event listener for updater test button when the DOM is loaded
+document.addEventListener("DOMContentLoaded", () => {
+  const testButton = document.getElementById("test-updater");
+  if (testButton) {
+    testButton.addEventListener("click", () => {
+      // Generate rapid notifications to demo overlapping
+      const sendMultipleNotifications = () => {
+        const messages = [
+          `❌ Place lookup failed`,
+          `❌ Scrape failed`,
+          `❌ Search failed`,
+          `🌎 Destinations found`,
+          `🌡️ Weather retrieved`,
+          `🏛️ Places found`,
+          `💡 Query planned`,
+          `📄 Page scraped`,
+          `📄 Page scraped`,
+          `🔎 Search completed`,
+        ];
+
+        // Send a few notifications in rapid succession
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            const randomMessage =
+              messages[Math.floor(Math.random() * messages.length)];
+            showUpdate(randomMessage);
+          }, i * 300); // 200ms apart
+        }
+      };
+
+      // Run the demo
+      sendMultipleNotifications();
+    });
+  }
+});
 
 // ==================== Icon Components ====================
 

@@ -170,11 +170,6 @@ class PlaceCard extends HTMLElement {
           transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        :host(:hover) {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
         .image-wrapper {
           width: 100%;
           height: 180px;

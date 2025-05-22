@@ -9,6 +9,8 @@
  * @property {number} [num] - The number of results to return (used in images)
  */
 
+import { showUpdate } from "/updater.js";
+
 /**
  * @typedef {Object} KnowledgeGraphAttributes
  * @property {string} Address - The business address
@@ -139,8 +141,11 @@ async function getSearch(query, { type = "search", count = 5 } = {}) {
       );
     }
 
-    return await response.json();
+    const result = await response.json();
+    showUpdate(`🔎 Search completed`);
+    return result;
   } catch (error) {
+    showUpdate(`❌ Search failed`);
     console.error("Error in getSearch:", error);
     throw error;
   }
@@ -224,8 +229,11 @@ async function getHistoricWeather(coordinates, startDate, endDate) {
       );
     }
 
-    return await response.json();
+    const result = await response.json();
+    showUpdate(`🌡️ Weather retrieved`);
+    return result;
   } catch (error) {
+    showUpdate(`❌ Weather lookup failed`);
     console.error("Error in getHistoricWeather:", error);
     throw error;
   }
