@@ -18,29 +18,42 @@ class StayItinerary extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._stay = null;
-    this._dayPlans = [];
     this._handlePlaceDelete = this._handlePlaceDelete.bind(this);
     this._handleDayDelete = this._handleDayDelete.bind(this);
     this._handlePlanDelete = this._handlePlanDelete.bind(this);
-    this._handleAddToPlane = this._handleAddToPlane.bind(this);
+    this._handleAddToPlan = this._handleAddToPlan.bind(this);
     this._handlePlanMove = this._handlePlanMove.bind(this);
+    this._handleDayMove = this._handleDayMove.bind(this);
+    this._handleAddDay = this._handleAddDay.bind(this);
+    this._updateStayBoundaries = this._updateStayBoundaries.bind(this);
     this.render();
   }
-  
+
   connectedCallback() {
-    this.shadowRoot.addEventListener('place-delete', this._handlePlaceDelete);
-    this.shadowRoot.addEventListener('day-delete', this._handleDayDelete);
-    this.shadowRoot.addEventListener('plan-delete', this._handlePlanDelete);
-    this.shadowRoot.addEventListener('place-add-to-plan', this._handleAddToPlane);
-    this.shadowRoot.addEventListener('plan-move', this._handlePlanMove);
+    this.shadowRoot.addEventListener("place-delete", this._handlePlaceDelete);
+    this.shadowRoot.addEventListener("day-delete", this._handleDayDelete);
+    this.shadowRoot.addEventListener("plan-delete", this._handlePlanDelete);
+    this.shadowRoot.addEventListener(
+      "place-add-to-plan",
+      this._handleAddToPlan
+    );
+    this.shadowRoot.addEventListener("plan-move", this._handlePlanMove);
+    this.shadowRoot.addEventListener("day-move", this._handleDayMove);
   }
-  
+
   disconnectedCallback() {
-    this.shadowRoot.removeEventListener('place-delete', this._handlePlaceDelete);
-    this.shadowRoot.removeEventListener('day-delete', this._handleDayDelete);
-    this.shadowRoot.removeEventListener('plan-delete', this._handlePlanDelete);
-    this.shadowRoot.removeEventListener('place-add-to-plan', this._handleAddToPlane);
-    this.shadowRoot.removeEventListener('plan-move', this._handlePlanMove);
+    this.shadowRoot.removeEventListener(
+      "place-delete",
+      this._handlePlaceDelete
+    );
+    this.shadowRoot.removeEventListener("day-delete", this._handleDayDelete);
+    this.shadowRoot.removeEventListener("plan-delete", this._handlePlanDelete);
+    this.shadowRoot.removeEventListener(
+      "place-add-to-plan",
+      this._handleAddToPlan
+    );
+    this.shadowRoot.removeEventListener("plan-move", this._handlePlanMove);
+    this.shadowRoot.removeEventListener("day-move", this._handleDayMove);
   }
 
   get stay() {
@@ -49,25 +62,124 @@ class StayItinerary extends HTMLElement {
 
   set stay(value) {
     this._stay = value;
-    if (value && value.day_plans) {
-      this._processStayData();
-    }
     this.render();
   }
 
-  _processStayData() {
-    if (!this._stay || !this._stay.day_plans) return;
+  /**
+   * Gets an array of day timestamps for each day in the stay duration
+   * @returns {Array<number>} Array of timestamps for the beginning of each day in the stay
+   */
+  _getDaysInStayDuration() {
+    // Return empty array if no arrival or departure time
+    if (!this._stay || !this._stay.arrival_time || !this._stay.departure_time) {
+      return [];
+    }
 
-    // Group day plans by day
-    const dayPlans = {};
+    // Convert timestamps to Date objects
+    const arrivalDate = new Date(this._stay.arrival_time * 1000);
+    const departureDate = new Date(this._stay.departure_time * 1000);
 
-    // Sort day plans by start time
-    const sortedPlans = [...this._stay.day_plans].sort(
-      (a, b) => a.start_time - b.start_time
+    // Set to beginning of day for consistent comparison
+    arrivalDate.setHours(0, 0, 0, 0);
+    departureDate.setHours(0, 0, 0, 0);
+
+    // Calculate number of days in the stay
+    const dayDiff = Math.floor(
+      (departureDate - arrivalDate) / (1000 * 60 * 60 * 24)
     );
 
-    // Group by day
-    sortedPlans.forEach((plan) => {
+    // Return empty array if invalid date range
+    if (dayDiff < 0) {
+      return [];
+    }
+
+    // Create array of day timestamps
+    const days = [];
+    for (let i = 0; i <= dayDiff; i++) {
+      const currentDate = new Date(arrivalDate);
+      currentDate.setDate(arrivalDate.getDate() + i);
+      currentDate.setHours(0, 0, 0, 0);
+      days.push(Math.floor(currentDate.getTime() / 1000));
+    }
+
+    return days;
+  }
+
+  /**
+   * Get unique dates for all days in the stay, including empty days
+   * @returns {Array} Array of day objects with just date property for each day in stay duration
+   * @private
+   */
+  _getProcessedDayPlans() {
+    if (!this._stay) return [];
+
+    // Get all days in the stay duration
+    const daysInStay = this._getDaysInStayDuration();
+
+    // If there are no days in the stay duration (no arrival/departure times)
+    if (daysInStay.length === 0) {
+      // If there are plans but no arrival/departure times, create days for those plans
+      if (this._stay.day_plans && this._stay.day_plans.length > 0) {
+        return this._getDaysFromPlans();
+      }
+      return [];
+    }
+
+    // Create a map of all days with just the date property
+    const dayPlans = {};
+
+    // Initialize days from the stay duration
+    daysInStay.forEach((dayTimestamp) => {
+      const date = new Date(dayTimestamp * 1000);
+      const dayKey = `${date.getFullYear()}-${
+        date.getMonth() + 1
+      }-${date.getDate()}`;
+
+      dayPlans[dayKey] = {
+        date: dayTimestamp,
+      };
+    });
+
+    // If there are plans, add any days not already in our map
+    if (this._stay.day_plans && this._stay.day_plans.length > 0) {
+      this._stay.day_plans.forEach((plan) => {
+        const date = new Date(plan.start_time * 1000);
+        const dayKey = `${date.getFullYear()}-${
+          date.getMonth() + 1
+        }-${date.getDate()}`;
+
+        // If this day isn't in our day map (could be outside stay duration), create it
+        if (!dayPlans[dayKey]) {
+          dayPlans[dayKey] = {
+            date: new Date(date).setHours(0, 0, 0, 0) / 1000,
+          };
+        }
+      });
+    }
+
+    // Convert to array and sort by date
+    return Object.values(dayPlans).sort((a, b) => a.date - b.date);
+  }
+
+  /**
+   * Get unique dates from plans when there's no arrival/departure times
+   * @returns {Array} Array of day objects with just date property
+   * @private
+   */
+  _getDaysFromPlans() {
+    if (
+      !this._stay ||
+      !this._stay.day_plans ||
+      this._stay.day_plans.length === 0
+    ) {
+      return [];
+    }
+
+    // Group plans by day
+    const dayPlans = {};
+
+    // Group plans by day, just keeping the date
+    this._stay.day_plans.forEach((plan) => {
       const date = new Date(plan.start_time * 1000);
       const dayKey = `${date.getFullYear()}-${
         date.getMonth() + 1
@@ -75,42 +187,90 @@ class StayItinerary extends HTMLElement {
 
       if (!dayPlans[dayKey]) {
         dayPlans[dayKey] = {
-          date: new Date(date).setHours(0, 0, 0, 0) / 1000, // Beginning of the day in seconds
-          activities: [],
-          weather: null,
+          date: new Date(date).setHours(0, 0, 0, 0) / 1000,
         };
       }
-
-      dayPlans[dayKey].activities.push(plan);
     });
-
-    // Add weather to each day if available
-    if (this._stay.weather && this._stay.weather.length > 0) {
-      this._stay.weather.forEach((weather) => {
-        const date = new Date(weather.start_time * 1000);
-        const dayKey = `${date.getFullYear()}-${
-          date.getMonth() + 1
-        }-${date.getDate()}`;
-
-        if (dayPlans[dayKey]) {
-          dayPlans[dayKey].weather = weather;
-        }
-      });
-    }
 
     // Convert to array and sort by date
-    this._dayPlans = Object.values(dayPlans).sort((a, b) => a.date - b.date);
+    return Object.values(dayPlans).sort((a, b) => a.date - b.date);
   }
 
-  _filterActivitiesByFood(activities, wantFood) {
-    if (!activities || !activities.length) return [];
+  /**
+   * Calculate the earliest start time and latest end time from day plans
+   * @param {Array} dayPlans Array of day plans to analyze
+   * @returns {Object} Object with earliestStartTime and latestEndTime
+   * @private
+   */
+  _calculatePlanBoundaries(dayPlans) {
+    if (!dayPlans || dayPlans.length === 0) {
+      return { earliestStartTime: null, latestEndTime: null };
+    }
 
-    return activities.filter((activity) => {
-      if (activity.kind !== "plan") return false;
+    // Find the earliest plan start day (beginning of day)
+    const earliestPlanDay = Math.min(
+      ...dayPlans.map((plan) => {
+        const planDate = new Date(plan.start_time * 1000);
+        planDate.setHours(0, 0, 0, 0);
+        return Math.floor(planDate.getTime() / 1000);
+      })
+    );
 
-      const isFood = activity.location.kind === "food";
-      return wantFood ? isFood : !isFood;
-    });
+    // Find the latest plan end day (end of day)
+    const latestPlanDay = Math.max(
+      ...dayPlans.map((plan) => {
+        const planDate = new Date(plan.end_time * 1000);
+        planDate.setHours(23, 59, 59, 999);
+        return Math.floor(planDate.getTime() / 1000);
+      })
+    );
+
+    return {
+      earliestStartTime: earliestPlanDay,
+      latestEndTime: latestPlanDay,
+    };
+  }
+
+  /**
+   * Update the stay's arrival and departure times based on day plans
+   * @param {Object} stay The stay object to update
+   * @returns {Object} Updated stay object with adjusted arrival and departure times
+   * @private
+   */
+  _updateStayBoundaries(stay) {
+    if (!stay || !stay.day_plans || stay.day_plans.length === 0) {
+      return stay;
+    }
+
+    // Calculate plan boundaries
+    const { earliestStartTime, latestEndTime } = this._calculatePlanBoundaries(
+      stay.day_plans
+    );
+
+    // Only update if we found valid times
+    const updatedStay = { ...stay };
+
+    if (earliestStartTime !== null) {
+      // Update arrival time if not set or if plans start earlier
+      if (
+        !updatedStay.arrival_time ||
+        earliestStartTime < updatedStay.arrival_time
+      ) {
+        updatedStay.arrival_time = earliestStartTime;
+      }
+    }
+
+    if (latestEndTime !== null) {
+      // Update departure time if not set or if plans end later
+      if (
+        !updatedStay.departure_time ||
+        latestEndTime > updatedStay.departure_time
+      ) {
+        updatedStay.departure_time = latestEndTime;
+      }
+    }
+
+    return updatedStay;
   }
 
   render() {
@@ -170,12 +330,12 @@ class StayItinerary extends HTMLElement {
           margin-right: 0.5rem;
           font-size: 1.4rem;
         }
-        
+
         .search-container {
           margin-left: auto;
           position: relative;
         }
-        
+
         .search-input {
           padding: 0.5rem;
           border: 1px solid #ccc;
@@ -183,7 +343,7 @@ class StayItinerary extends HTMLElement {
           font-size: 0.9rem;
           width: 200px;
         }
-        
+
         .search-loading {
           position: absolute;
           top: 35px;
@@ -194,6 +354,28 @@ class StayItinerary extends HTMLElement {
           border: 1px solid #ddd;
           font-size: 0.8rem;
           z-index: 100;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .add-day-button {
+          background-color: #4CAF50;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 0.5rem 1rem;
+          font-size: 0.9rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .add-day-button:hover {
+          background-color: #45a049;
         }
 
         card-carousel {
@@ -249,25 +431,38 @@ class StayItinerary extends HTMLElement {
         }
       </div>
 
-      <div class="day-plans">
-        ${
-          this._dayPlans.length > 0
-            ? this._dayPlans
-                .map(
-                  (dayPlan, index) => `<day-plan id="day-${index}"></day-plan>`
-                )
-                .join("")
-            : '<div class="empty-state">No daily plans available for this destination yet</div>'
-        }
+      <div class="day-plans-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="section-icon">📅</span>
+            <span>Daily Plans</span>
+          </h2>
+          <button id="add-day-button" class="add-day-button">+ Add New Day</button>
+        </div>
+        <div class="day-plans">
+          ${(() => {
+            const dayPlans = this._getProcessedDayPlans();
+            return dayPlans.length > 0
+              ? dayPlans
+                  .map(
+                    (dayPlan, index) =>
+                      `<day-plan id="day-${index}"></day-plan>`
+                  )
+                  .join("")
+              : '<div class="empty-state">No daily plans available for this destination yet</div>';
+          })()}
+        </div>
       </div>
     `;
 
     // Create and populate place cards for activities carousel
     if (activityPlaces.length > 0) {
-      const activitiesCarousel = this.shadowRoot.getElementById('activities-carousel');
+      const activitiesCarousel = this.shadowRoot.getElementById(
+        "activities-carousel"
+      );
       if (activitiesCarousel) {
-        const activityCards = activityPlaces.map(place => {
-          const card = document.createElement('place-card');
+        const activityCards = activityPlaces.map((place) => {
+          const card = document.createElement("place-card");
           card.place = place;
           return card;
         });
@@ -277,10 +472,10 @@ class StayItinerary extends HTMLElement {
 
     // Create and populate place cards for food carousel
     if (foodPlaces.length > 0) {
-      const foodCarousel = this.shadowRoot.getElementById('food-carousel');
+      const foodCarousel = this.shadowRoot.getElementById("food-carousel");
       if (foodCarousel) {
-        const foodCards = foodPlaces.map(place => {
-          const card = document.createElement('place-card');
+        const foodCards = foodPlaces.map((place) => {
+          const card = document.createElement("place-card");
           card.place = place;
           return card;
         });
@@ -289,398 +484,666 @@ class StayItinerary extends HTMLElement {
     }
 
     // Set data for day plans
-    this._dayPlans.forEach((dayPlan, index) => {
+    const dayPlans = this._getProcessedDayPlans();
+    dayPlans.forEach((dayPlan, index) => {
       const element = this.shadowRoot.getElementById(`day-${index}`);
       if (element) {
+        // Set stay and date properties
+        element.stay = this._stay;
         element.date = dayPlan.date;
-        element.activities = dayPlan.activities;
-        element.weather = dayPlan.weather;
       }
     });
-    
+
+    // Add event listener for add day button
+    const addDayButton = this.shadowRoot.getElementById("add-day-button");
+    if (addDayButton) {
+      addDayButton.addEventListener("click", this._handleAddDay);
+    }
+
     // Add event listeners for search inputs
-    const activitiesSearch = this.shadowRoot.getElementById('activities-search');
-    const foodSearch = this.shadowRoot.getElementById('food-search');
-    
+    const activitiesSearch =
+      this.shadowRoot.getElementById("activities-search");
+    const foodSearch = this.shadowRoot.getElementById("food-search");
+
     if (activitiesSearch) {
-      activitiesSearch.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter' && activitiesSearch.value.trim()) {
+      activitiesSearch.addEventListener("keypress", async (e) => {
+        if (e.key === "Enter" && activitiesSearch.value.trim()) {
           const query = activitiesSearch.value.trim();
           const destination = this._stay.destination;
-          
+
           try {
             // Show loading indicator
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.textContent = 'Searching...';
-            loadingIndicator.className = 'search-loading';
+            const loadingIndicator = document.createElement("div");
+            loadingIndicator.textContent = "Searching...";
+            loadingIndicator.className = "search-loading";
             activitiesSearch.parentNode.appendChild(loadingIndicator);
-            
+
             // Get new activities
             const newPlaces = await getPlaceResearch(query, destination);
-            
+
             // Update the underlying data structure
             if (newPlaces.length > 0 && this._stay) {
               // Get existing options
               const existingOptions = this._stay.options || [];
-              
+
               // Get food places from existing options
-              const foodPlaces = existingOptions.filter(place => place.kind === "food");
-              
+              const foodPlaces = existingOptions.filter(
+                (place) => place.kind === "food"
+              );
+
               // Get existing non-food places
-              const existingNonFoodPlaces = existingOptions.filter(place => place.kind !== "food");
-              
+              const existingNonFoodPlaces = existingOptions.filter(
+                (place) => place.kind !== "food"
+              );
+
               // Get new non-food places from search results
-              const newNonFoodPlaces = newPlaces.filter(place => place.kind !== "food");
-              
+              const newNonFoodPlaces = newPlaces.filter(
+                (place) => place.kind !== "food"
+              );
+
               // Create updated stay with new options - new places at the start
               const updatedStay = {
                 ...this._stay,
-                options: [...newNonFoodPlaces, ...existingNonFoodPlaces, ...foodPlaces]
+                options: [
+                  ...newNonFoodPlaces,
+                  ...existingNonFoodPlaces,
+                  ...foodPlaces,
+                ],
               };
-              
+
               // Update the stay in the trip state using its ID
               TripState.update(this._stay.id, updatedStay);
-              
+
               // Save the updated trip data
               TripState.saveTrip();
             }
-            
+
             // Remove loading indicator
             if (loadingIndicator && loadingIndicator.parentNode) {
               loadingIndicator.parentNode.removeChild(loadingIndicator);
             }
           } catch (error) {
-            console.error('Error searching for activities:', error);
+            console.error("Error searching for activities:", error);
           }
         }
       });
     }
-    
+
     if (foodSearch) {
-      foodSearch.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter' && foodSearch.value.trim()) {
+      foodSearch.addEventListener("keypress", async (e) => {
+        if (e.key === "Enter" && foodSearch.value.trim()) {
           const query = foodSearch.value.trim();
           const destination = this._stay.destination;
-          
+
           try {
             // Show loading indicator
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.textContent = 'Searching...';
-            loadingIndicator.className = 'search-loading';
+            const loadingIndicator = document.createElement("div");
+            loadingIndicator.textContent = "Searching...";
+            loadingIndicator.className = "search-loading";
             foodSearch.parentNode.appendChild(loadingIndicator);
-            
+
             // Get new food places
             const newPlaces = await getPlaceResearch(query, destination);
-            
+
             // Update the underlying data structure
             if (newPlaces.length > 0 && this._stay) {
               // Get existing options
               const existingOptions = this._stay.options || [];
-              
+
               // Get non-food places from existing options
-              const nonFoodPlaces = existingOptions.filter(place => place.kind !== "food");
-              
+              const nonFoodPlaces = existingOptions.filter(
+                (place) => place.kind !== "food"
+              );
+
               // Get existing food places
-              const existingFoodPlaces = existingOptions.filter(place => place.kind === "food");
-              
+              const existingFoodPlaces = existingOptions.filter(
+                (place) => place.kind === "food"
+              );
+
               // Get new food places from search results
-              const newFoodPlaces = newPlaces.filter(place => place.kind === "food");
-              
+              const newFoodPlaces = newPlaces.filter(
+                (place) => place.kind === "food"
+              );
+
               // Create updated stay with new options - new places at the start
               const updatedStay = {
                 ...this._stay,
-                options: [...newFoodPlaces, ...existingFoodPlaces, ...nonFoodPlaces]
+                options: [
+                  ...newFoodPlaces,
+                  ...existingFoodPlaces,
+                  ...nonFoodPlaces,
+                ],
               };
-              
+
               // Update the stay in the trip state using its ID
               TripState.update(this._stay.id, updatedStay);
-              
+
               // Save the updated trip data
               TripState.saveTrip();
             }
-            
+
             // Remove loading indicator
             if (loadingIndicator && loadingIndicator.parentNode) {
               loadingIndicator.parentNode.removeChild(loadingIndicator);
             }
           } catch (error) {
-            console.error('Error searching for food places:', error);
+            console.error("Error searching for food places:", error);
           }
         }
       });
     }
   }
-  
+
   /**
    * Handle the place-delete event from a place-card
    * @param {CustomEvent} event The place-delete event
    */
   _handlePlaceDelete(event) {
     const place = event.detail.place;
-    
+
     if (!place || !place.id || !this._stay || !this._stay.options) return;
-    
+
     // Filter out the place with the matching ID
-    const updatedOptions = this._stay.options.filter(option => option.id !== place.id);
-    
+    const updatedOptions = this._stay.options.filter(
+      (option) => option.id !== place.id
+    );
+
     // Create an updated stay object
     const updatedStay = {
       ...this._stay,
-      options: updatedOptions
+      options: updatedOptions,
     };
-    
+
     // Update the stay in the trip state
     TripState.update(this._stay.id, updatedStay);
-    
+
     // Save the updated trip data
     TripState.saveTrip();
   }
-  
+
   /**
    * Handle the day-delete event from a day-plan
    * @param {CustomEvent} event The day-delete event
    */
   _handleDayDelete(event) {
     const { date, activities } = event.detail;
-    
+
     if (!date || !this._stay || !this._stay.day_plans) return;
-    
+
     // Get the beginning of the day in seconds
     const dayStart = new Date(date * 1000).setHours(0, 0, 0, 0) / 1000;
     const dayEnd = new Date(date * 1000).setHours(23, 59, 59, 999) / 1000;
-    
+
     // Get current options or initialize empty array
     const currentOptions = this._stay.options || [];
-    
-    // Separate day plans into those for this day and other days
-    const dayPlans = [];
-    const otherDayPlans = [];
-    
-    this._stay.day_plans.forEach(plan => {
+
+    // Separate day plans into those for this day, before this day, and after this day
+    const removedDayPlans = [];
+    const updatedDayPlans = [];
+
+    this._stay.day_plans.forEach((plan) => {
       if (plan.start_time >= dayStart && plan.start_time <= dayEnd) {
-        dayPlans.push(plan);
-      } else {
-        otherDayPlans.push(plan);
+        removedDayPlans.push(plan);
+      } else if (plan.start_time < dayStart) {
+        updatedDayPlans.push(plan);
+      } else if (plan.start_time > dayEnd) {
+        // Create a copy of the plan to modify
+        const updatedPlan = { ...plan };
+        // Decrement time by 1 day (86400 seconds) for plans after the deleted day
+        updatedPlan.start_time -= 86400;
+        updatedPlan.end_time -= 86400;
+        updatedDayPlans.push(updatedPlan);
       }
     });
-    
+
     // Extract locations from day plans to move back to options
-    const locationsToAdd = dayPlans
-      .filter(plan => plan.kind === "plan" && plan.location)
-      .map(plan => plan.location);
-    
+    const locationsToAdd = removedDayPlans
+      .filter((plan) => plan.kind === "plan" && plan.location)
+      .map((plan) => plan.location);
+
     // Create updated options list with the removed locations added back
     const updatedOptions = [...locationsToAdd, ...currentOptions];
-    
-    // Create an updated stay object
-    const updatedStay = {
+
+    // Create a preliminary updated stay object
+    let updatedStay = {
       ...this._stay,
-      day_plans: otherDayPlans,
-      options: updatedOptions
+      day_plans: updatedDayPlans,
+      options: updatedOptions,
     };
-    
+
+    if (updatedStay.departure_time) {
+      updatedStay.departure_time -= 86400;
+    }
+
+    // Reset times to null if there are no more days
+    if (updatedStay.departure_time < updatedStay.arrival_time) {
+      updatedStay.arrival_time = null;
+      updatedStay.departure_time = null;
+    }
+
+    // Update arrival and departure times based on remaining plans
+    updatedStay = this._updateStayBoundaries(updatedStay);
+
     // Update the stay in the trip state
     TripState.update(this._stay.id, updatedStay);
-    
+
     // Save the updated trip data
     TripState.saveTrip();
   }
-  
+
   /**
    * Handle the plan-delete event from a plan-item
    * @param {CustomEvent} event The plan-delete event
    */
   _handlePlanDelete(event) {
     const { plan } = event.detail;
-    
+
     if (!plan || !plan.id || !this._stay || !this._stay.day_plans) return;
-    
+
     // Filter out the plan with the matching ID
-    const updatedDayPlans = this._stay.day_plans.filter(item => {
+    const updatedDayPlans = this._stay.day_plans.filter((item) => {
       // Check if the item has an ID and it doesn't match the plan ID
       return !item.id || item.id !== plan.id;
     });
-    
+
     // Get the location from the plan to add back to options
     const location = plan.location;
-    
+
     // Get current options or initialize empty array
     const currentOptions = this._stay.options || [];
-    
+
     // Create an updated options list with the removed location added back
     const updatedOptions = [location, ...currentOptions];
-    
-    // Create an updated stay object
-    const updatedStay = {
+
+    // Create a preliminary updated stay object
+    let updatedStay = {
       ...this._stay,
       day_plans: updatedDayPlans,
-      options: updatedOptions
+      options: updatedOptions,
     };
-    
+
+    // Update stay boundaries based on the remaining plans
+    updatedStay = this._updateStayBoundaries(updatedStay);
+
     // Update the stay in the trip state
     TripState.update(this._stay.id, updatedStay);
-    
+
     // Save the updated trip data
     TripState.saveTrip();
   }
-  
+
   /**
    * Handle the plan-move event from a plan-item
    * @param {CustomEvent} event The plan-move event
    */
   _handlePlanMove(event) {
     const { plan, direction } = event.detail;
-    
+
     if (!plan || !plan.id || !this._stay || !this._stay.day_plans) return;
-    
+
     // Find the index of the plan to move
-    const planIndex = this._stay.day_plans.findIndex(item => item.id === plan.id);
-    
+    const planIndex = this._stay.day_plans.findIndex(
+      (item) => item.id === plan.id
+    );
+
     if (planIndex === -1) return; // Plan not found
-    
+
     // Create a copy of the day plans
     const updatedDayPlans = [...this._stay.day_plans];
-    const planToUpdate = {...updatedDayPlans[planIndex]};
-    
+    const planToUpdate = { ...updatedDayPlans[planIndex] };
+
     // Calculate duration of the plan
     const duration = planToUpdate.end_time - planToUpdate.start_time;
-    
+
     // Create Date objects for start and end times
     const startDate = new Date(planToUpdate.start_time * 1000);
     const endDate = new Date(planToUpdate.end_time * 1000);
-    
+
     // Adjust time based on direction - move up or down by 1 hour
-    if (direction === 'up') {
+    if (direction === "up") {
       // Move up (earlier) by 1 hour
       startDate.setHours(startDate.getHours() - 1);
       endDate.setHours(endDate.getHours() - 1);
-    } else if (direction === 'down') {
+    } else if (direction === "down") {
       // Move down (later) by 1 hour
       startDate.setHours(startDate.getHours() + 1);
       endDate.setHours(endDate.getHours() + 1);
     }
-    
+
     // Update the plan with new times
     planToUpdate.start_time = Math.floor(startDate.getTime() / 1000);
     planToUpdate.end_time = Math.floor(endDate.getTime() / 1000);
-    
+
     // Update the plan in the day plans array
     updatedDayPlans[planIndex] = planToUpdate;
-    
-    // Create an updated stay object
-    const updatedStay = {
+
+    // Create a preliminary updated stay object
+    let updatedStay = {
       ...this._stay,
-      day_plans: updatedDayPlans
+      day_plans: updatedDayPlans,
     };
-    
+
+    // Update arrival and departure times based on the updated plans
+    updatedStay = this._updateStayBoundaries(updatedStay);
+
     // Update the stay in the trip state
     TripState.update(this._stay.id, updatedStay);
-    
+
     // Save the updated trip data
     TripState.saveTrip();
   }
-  
+
   /**
    * Handle the place-add-to-plan event from a place-card
    * @param {CustomEvent} event The place-add-to-plan event
    */
-  _handleAddToPlane(event) {
-    const { place } = event.detail;
-    
-    if (!place || !this._stay) return;
-    
+  _handleAddToPlan(event) {
+    const place = event.detail.place;
+
+    if (!place || !place.id || !this._stay) return;
+
+    // Get current options or initialize empty array
+    const currentOptions = this._stay.options || [];
+
+    // Remove the place from options
+    const updatedOptions = currentOptions.filter(
+      (option) => option.id !== place.id
+    );
+
     // Initialize day_plans if it doesn't exist
     if (!this._stay.day_plans) {
       this._stay.day_plans = [];
     }
-    
-    // Get the current date and time
-    const now = new Date();
-    
-    // Create a date object for today
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    
-    // Find the last day plan, or create a new one if none exists
-    let lastDayTimestamp;
-    
+
+    // Determine the start time for the plan
+    let startTime;
+
+    // First check if there are any existing day_plans
     if (this._stay.day_plans.length > 0) {
-      // Find the latest day in existing plans
-      const lastDay = this._stay.day_plans.reduce((latest, plan) => {
-        const planDate = new Date(plan.start_time * 1000);
-        planDate.setHours(0, 0, 0, 0);
-        const planTimestamp = planDate.getTime() / 1000;
-        
-        return planTimestamp > latest ? planTimestamp : latest;
-      }, 0);
-      
-      lastDayTimestamp = lastDay;
+      // Find the latest end time among all existing plans
+      const latestEndTime = Math.max(
+        ...this._stay.day_plans.map((plan) => plan.end_time || 0)
+      );
+      startTime = latestEndTime;
+    } else if (this._stay.arrival_time) {
+      // If no existing plans but arrival time is set, use that
+      startTime = this._stay.arrival_time;
     } else {
-      // If no plans exist, use today
-      lastDayTimestamp = today.getTime() / 1000;
+      // If no arrival time, use the trip start time
+      const trip = TripState.getTrip();
+      if (trip && trip.timeline && trip.timeline.start_date) {
+        // Convert trip start date to timestamp
+        const startDate = new Date(
+          trip.timeline.start_date.year,
+          trip.timeline.start_date.month - 1, // JavaScript months are 0-indexed
+          trip.timeline.start_date.day
+        );
+        startDate.setHours(0, 0, 0, 0);
+        startTime = Math.floor(startDate.getTime() / 1000);
+      } else {
+        // Fallback to current time
+        startTime = Math.floor(Date.now() / 1000);
+      }
     }
-    
-    // Create a date object for the day we'll add the plan to
-    const planDay = new Date(lastDayTimestamp * 1000);
-    
-    // Set default times for the plan (10am to 12pm on the last day)
-    const startTime = new Date(planDay);
-    startTime.setHours(10, 0, 0, 0);
-    
-    const endTime = new Date(planDay);
-    endTime.setHours(12, 0, 0, 0);
-    
-    // Create a new plan with the place
-    const newPlan = {
-      id: crypto.randomUUID(),
+
+    // Create a new plan with 1 hour duration
+    const endTime = startTime + 3600; // Add 1 hour (3600 seconds)
+
+    // Create a unique ID for the plan
+    const planId = `plan-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    // Create the plan object
+    const plan = {
+      id: planId,
       kind: "plan",
-      start_time: Math.floor(startTime.getTime() / 1000),
-      end_time: Math.floor(endTime.getTime() / 1000),
-      location: place
+      location: place,
+      start_time: startTime,
+      end_time: endTime,
     };
-    
-    // Remove the place from options after adding to plan
-    let updatedOptions = [];
-    if (this._stay.options) {
-      updatedOptions = this._stay.options.filter(option => option.id !== place.id);
-    }
-    
-    // Create an updated stay object with the new plan and filtered options
-    const updatedStay = {
+
+    // Add the new plan to day_plans
+    let updatedStay = {
       ...this._stay,
-      day_plans: [...this._stay.day_plans, newPlan],
-      options: updatedOptions
+      options: updatedOptions,
+      day_plans: [...this._stay.day_plans, plan],
     };
-    
+
+    // Update stay boundaries based on the new plan
+    updatedStay = this._updateStayBoundaries(updatedStay);
+
     // Update the stay in the trip state
     TripState.update(this._stay.id, updatedStay);
-    
+
     // Save the updated trip data
     TripState.saveTrip();
-    
-    // Show a confirmation message
-    const toast = document.createElement('div');
-    toast.textContent = `Added ${place.name} to your plan!`;
-    toast.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 4px;
-      z-index: 1000;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    `;
-    document.body.appendChild(toast);
-    
-    // Remove the toast after 3 seconds
-    setTimeout(() => {
-      if (toast.parentNode) {
-        toast.parentNode.removeChild(toast);
+  }
+
+  /**
+   * Handle the day-move event from a day-plan
+   * @param {CustomEvent} event The day-move event
+   */
+  _handleDayMove(event) {
+    const { date, activities, direction, isEmpty } = event.detail;
+
+    if (!date || !this._stay) return;
+
+    // Get the beginning and end of the day in seconds
+    const dayStart = new Date(date * 1000).setHours(0, 0, 0, 0) / 1000;
+    const dayEnd = new Date(date * 1000).setHours(23, 59, 59, 999) / 1000;
+
+    // Calculate the time shift (86400 seconds = 1 day)
+    const timeShift = direction === "earlier" ? -86400 : 86400;
+
+    // Initialize day_plans if it doesn't exist
+    if (!this._stay.day_plans) {
+      this._stay.day_plans = [];
+    }
+
+    // Separate day plans into those for this day and other days
+    const dayPlans = [];
+    const otherDayPlans = [];
+
+    this._stay.day_plans.forEach((plan) => {
+      if (plan.start_time >= dayStart && plan.start_time <= dayEnd) {
+        dayPlans.push(plan);
+      } else {
+        otherDayPlans.push(plan);
       }
-    }, 3000);
+    });
+
+    // Create a copy of the stay to modify
+    const updatedStay = { ...this._stay };
+
+    // If there are plans in the day, move them
+    if (dayPlans.length > 0) {
+      // Create a copy of the day plans to be moved and shift their times
+      const movedDayPlans = dayPlans.map((plan) => {
+        const updatedPlan = { ...plan };
+        updatedPlan.start_time += timeShift;
+        updatedPlan.end_time += timeShift;
+        return updatedPlan;
+      });
+
+      // Combine the moved plans with the other plans
+      updatedStay.day_plans = [...otherDayPlans, ...movedDayPlans];
+
+      // Update arrival and departure times based on the updated plans
+      updatedStay = this._updateStayBoundaries(updatedStay);
+    } else {
+      // No plans to move, just adjust the stay's arrival/departure times
+      if (direction === "earlier") {
+        // Moving day earlier
+        const newDayStart = dayStart + timeShift; // Subtract one day
+
+        // Update arrival time if this affects it
+        if (
+          !updatedStay.arrival_time ||
+          newDayStart < updatedStay.arrival_time
+        ) {
+          updatedStay.arrival_time = newDayStart;
+        }
+      } else {
+        // Moving day later
+        const newDayEnd = dayEnd + timeShift; // Add one day
+
+        // Update departure time if this affects it
+        if (
+          !updatedStay.departure_time ||
+          newDayEnd > updatedStay.departure_time
+        ) {
+          updatedStay.departure_time = newDayEnd;
+        }
+      }
+    }
+
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+
+    // Save the updated trip data
+    TripState.saveTrip();
+  }
+
+  /**
+   * Handle clicks on the Add New Day button
+   * @param {Event} event The click event
+   */
+  _handleAddDay(event) {
+    if (!this._stay) return;
+
+    // Initialize day_plans if it doesn't exist
+    if (!this._stay.day_plans) {
+      this._stay.day_plans = [];
+    }
+
+    // Calculate the date for the new day
+    let newDayTimestamp;
+
+    // Check if stay has arrival and departure times
+    if (this._stay.arrival_time && this._stay.departure_time) {
+      // If it has arrival and departure times, just add one day to departure
+      const departureDate = new Date(this._stay.departure_time * 1000);
+      departureDate.setHours(0, 0, 0, 0);
+      departureDate.setDate(departureDate.getDate() + 1); // One day after departure
+      newDayTimestamp = Math.floor(departureDate.getTime() / 1000);
+
+      // Update the departure time
+      this._stay.departure_time = newDayTimestamp;
+    } else {
+      // Get processed day plans
+      const dayPlans = this._getProcessedDayPlans();
+
+      if (dayPlans.length > 0) {
+        // If no arrival/departure but has day plans, add to the latest day
+        const latestDay = Math.max(...dayPlans.map((plan) => plan.date));
+        newDayTimestamp = latestDay + 86400; // Add one day (86400 seconds)
+
+        // If there's no arrival/departure time, set them now
+        if (!this._stay.arrival_time) {
+          // Set arrival to earliest day
+          const earliestDay = Math.min(...dayPlans.map((plan) => plan.date));
+          this._stay.arrival_time = earliestDay;
+        }
+
+        // Set departure to new latest day
+        this._stay.departure_time = newDayTimestamp;
+      } else {
+        // No existing data - check if we need to set based on the trip's other stays
+        const trip = TripState.getTrip();
+        let latestDepartureTime = 0;
+
+        // Find the latest departure time of all other stays
+        if (trip && trip.stays) {
+          trip.stays.forEach((stay) => {
+            if (stay.id !== this._stay.id && stay.departure_time) {
+              latestDepartureTime = Math.max(
+                latestDepartureTime,
+                stay.departure_time
+              );
+            }
+          });
+        }
+
+        if (latestDepartureTime > 0) {
+          // Set arrival to day after latest departure from other stays
+          const latestDate = new Date(latestDepartureTime * 1000);
+          latestDate.setHours(0, 0, 0, 0);
+          latestDate.setDate(latestDate.getDate() + 1); // One day after
+
+          newDayTimestamp = Math.floor(latestDate.getTime() / 1000);
+
+          // Set arrival to this day
+          this._stay.arrival_time = newDayTimestamp;
+
+          // Set departure to the next day
+          const departureDate = new Date(newDayTimestamp * 1000);
+          departureDate.setDate(departureDate.getDate() + 1);
+          this._stay.departure_time = Math.floor(
+            departureDate.getTime() / 1000
+          );
+        } else {
+          // Check if there's a trip start date we can use
+          const trip = TripState.getTrip();
+          if (trip && trip.timeline && trip.timeline.start_date) {
+            // Use the trip's start date
+            const startDate = new Date(
+              trip.timeline.start_date.year,
+              trip.timeline.start_date.month - 1, // JavaScript months are 0-indexed
+              trip.timeline.start_date.day
+            );
+            startDate.setHours(0, 0, 0, 0);
+
+            newDayTimestamp = Math.floor(startDate.getTime() / 1000);
+
+            // Set arrival to trip start date
+            this._stay.arrival_time = newDayTimestamp;
+
+            // Set departure to day after trip start
+            const departureDate = new Date(startDate);
+            departureDate.setDate(departureDate.getDate() + 1);
+            this._stay.departure_time = Math.floor(
+              departureDate.getTime() / 1000
+            );
+          } else {
+            // No trip start date available, fallback to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+
+            newDayTimestamp = Math.floor(tomorrow.getTime() / 1000);
+
+            // Set arrival to tomorrow
+            this._stay.arrival_time = newDayTimestamp;
+
+            // Set departure to day after tomorrow
+            const departureDate = new Date(tomorrow);
+            departureDate.setDate(departureDate.getDate() + 1);
+            this._stay.departure_time = Math.floor(
+              departureDate.getTime() / 1000
+            );
+          }
+        }
+      }
+    }
+
+    // We don't need to create filler plans anymore, just update the arrival/departure times
+
+    // Create an updated stay object with the updated arrival/departure times
+    let updatedStay = {
+      ...this._stay,
+      arrival_time: this._stay.arrival_time,
+      departure_time: this._stay.departure_time,
+    };
+
+    // Update stay boundaries if there are any day plans
+    if (updatedStay.day_plans && updatedStay.day_plans.length > 0) {
+      updatedStay = this._updateStayBoundaries(updatedStay);
+    }
+
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+
+    // Save the updated trip data
+    TripState.saveTrip();
   }
 }
 

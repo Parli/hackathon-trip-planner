@@ -141,6 +141,9 @@ function addStayToTrip(stay) {
   }
 }
 
+// Store the current search results
+let currentSearchResults = [];
+
 // Handle destination search
 async function handleDestinationSearch(event) {
   event.preventDefault();
@@ -161,13 +164,32 @@ async function handleDestinationSearch(event) {
     // Clear the loading message
     searchResults.innerHTML = "";
 
-    if (stays && stays.length > 0) {
+    // Get current trip data to filter out destinations already in the trip
+    const tripData = TripState.getTrip();
+    const existingDestinations = tripData.stays.map(stay => 
+      `${stay.destination.city.toLowerCase()},${stay.destination.country.toLowerCase()}`
+    );
+    
+    // Filter out destinations that are already in the trip
+    const filteredStays = stays.filter(stay => {
+      const stayKey = `${stay.destination.city.toLowerCase()},${stay.destination.country.toLowerCase()}`;
+      return !existingDestinations.includes(stayKey);
+    });
+    
+    // Update current search results
+    currentSearchResults = filteredStays;
+
+    if (filteredStays && filteredStays.length > 0) {
       // Create city cards for each stay
-      const cityCards = stays.map((stay) => {
+      const cityCards = filteredStays.map((stay) => {
         const card = document.createElement("city-card");
         card.stay = stay;
         // Add click handler to add the stay to the trip
-        card.addEventListener("click", () => addStayToTrip(stay));
+        card.addEventListener("click", () => {
+          addStayToTrip(stay);
+          // Remove the added stay from the carousel
+          updateSearchResultsAfterAdd(stay);
+        });
         return card;
       });
 
@@ -182,11 +204,62 @@ async function handleDestinationSearch(event) {
       // Show the carousel
       cityCarousel.style.display = "block";
     } else {
-      searchResults.innerHTML =
-        "<p>No destinations found. Try a different search.</p>";
+      if (stays.length > 0 && filteredStays.length === 0) {
+        searchResults.innerHTML =
+          "<p>All found destinations are already in your itinerary. Try searching for different destinations.</p>";
+      } else {
+        searchResults.innerHTML =
+          "<p>No destinations found. Try a different search.</p>";
+      }
+      cityCarousel.style.display = "none";
     }
   } catch (error) {
     console.error("Error searching for destinations:", error);
     searchResults.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+    cityCarousel.style.display = "none";
   }
+}
+
+/**
+ * Update the search results carousel after adding a stay
+ * @param {Object} addedStay The stay that was added
+ */
+function updateSearchResultsAfterAdd(addedStay) {
+  const cityCarousel = document.getElementById("cityCarousel");
+  const stayCarousel = document.getElementById("stayCarousel");
+  const searchResults = document.getElementById("searchResults");
+  
+  // Remove the added stay from current results
+  currentSearchResults = currentSearchResults.filter(stay => 
+    !(stay.destination.city === addedStay.destination.city && 
+      stay.destination.country === addedStay.destination.country)
+  );
+  
+  if (currentSearchResults.length === 0) {
+    // Hide carousel if no results left
+    cityCarousel.style.display = "none";
+    searchResults.innerHTML = "<p>All destinations added to your itinerary!</p>";
+    return;
+  }
+  
+  // Create new city cards for remaining stays
+  const cityCards = currentSearchResults.map((stay) => {
+    const card = document.createElement("city-card");
+    card.stay = stay;
+    // Add click handler to add the stay to the trip
+    card.addEventListener("click", () => {
+      addStayToTrip(stay);
+      // Remove the added stay from the carousel
+      updateSearchResultsAfterAdd(stay);
+    });
+    return card;
+  });
+  
+  // Clear any existing cards
+  while (stayCarousel.firstChild) {
+    stayCarousel.removeChild(stayCarousel.firstChild);
+  }
+  
+  // Add the updated cards to the carousel
+  stayCarousel.cards = cityCards;
 }

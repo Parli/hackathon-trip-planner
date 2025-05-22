@@ -44,6 +44,47 @@ class TripItinerary extends HTMLElement {
     return `${this._formatDate(start_date)} - ${this._formatDate(end_date)}`;
   }
 
+  _getStayTimestamp(stay) {
+    // First check if the stay has an arrival_time
+    if (stay.arrival_time) {
+      return stay.arrival_time;
+    }
+    
+    // If no arrival_time, check day plans
+    if (stay.day_plans && stay.day_plans.length > 0) {
+      // Find the earliest start_time among all day plans
+      return stay.day_plans.reduce((earliest, plan) => {
+        // Convert to start of day for consistency
+        const planDate = new Date(plan.start_time * 1000);
+        planDate.setHours(0, 0, 0, 0);
+        const dayTimestamp = planDate.getTime() / 1000;
+        
+        return dayTimestamp < earliest ? dayTimestamp : earliest;
+      }, Infinity);
+    }
+    
+    // If neither arrival_time nor day_plans, return Infinity to sort to the end
+    return Infinity;
+  }
+  
+  _getSortedStays(stays) {
+    if (!stays || stays.length === 0) {
+      return [];
+    }
+    
+    // Create a copy with timestamp for sorting
+    const staysWithDates = stays.map(stay => ({
+      stay,
+      timestamp: this._getStayTimestamp(stay)
+    }));
+    
+    // Sort by timestamp (stays with no timestamp will be at the end)
+    staysWithDates.sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Return just the sorted stays
+    return staysWithDates.map(item => item.stay);
+  }
+
   render() {
     if (!this._trip) {
       this.shadowRoot.innerHTML = `
@@ -59,6 +100,7 @@ class TripItinerary extends HTMLElement {
     }
 
     const { title, stays } = this._trip;
+    const sortedStays = this._getSortedStays(stays);
     const dateRange = this._getDateRange();
 
     this.shadowRoot.innerHTML = `
@@ -128,8 +170,8 @@ class TripItinerary extends HTMLElement {
 
       <div class="stays">
         ${
-          stays && stays.length > 0
-            ? stays
+          sortedStays && sortedStays.length > 0
+            ? sortedStays
                 .map(
                   (stay, index) => `
             ${
@@ -147,8 +189,8 @@ class TripItinerary extends HTMLElement {
     `;
 
     // Set data for stay itineraries after they're created
-    if (stays && stays.length > 0) {
-      stays.forEach((stay, index) => {
+    if (sortedStays && sortedStays.length > 0) {
+      sortedStays.forEach((stay, index) => {
         const element = this.shadowRoot.getElementById(`stay-${index}`);
         if (element) {
           element.stay = stay;
