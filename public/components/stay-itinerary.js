@@ -22,6 +22,8 @@ class StayItinerary extends HTMLElement {
     this._handlePlaceDelete = this._handlePlaceDelete.bind(this);
     this._handleDayDelete = this._handleDayDelete.bind(this);
     this._handlePlanDelete = this._handlePlanDelete.bind(this);
+    this._handleAddToPlane = this._handleAddToPlane.bind(this);
+    this._handlePlanMove = this._handlePlanMove.bind(this);
     this.render();
   }
   
@@ -29,12 +31,16 @@ class StayItinerary extends HTMLElement {
     this.shadowRoot.addEventListener('place-delete', this._handlePlaceDelete);
     this.shadowRoot.addEventListener('day-delete', this._handleDayDelete);
     this.shadowRoot.addEventListener('plan-delete', this._handlePlanDelete);
+    this.shadowRoot.addEventListener('place-add-to-plan', this._handleAddToPlane);
+    this.shadowRoot.addEventListener('plan-move', this._handlePlanMove);
   }
   
   disconnectedCallback() {
     this.shadowRoot.removeEventListener('place-delete', this._handlePlaceDelete);
     this.shadowRoot.removeEventListener('day-delete', this._handleDayDelete);
     this.shadowRoot.removeEventListener('plan-delete', this._handlePlanDelete);
+    this.shadowRoot.removeEventListener('place-add-to-plan', this._handleAddToPlane);
+    this.shadowRoot.removeEventListener('plan-move', this._handlePlanMove);
   }
 
   get stay() {
@@ -443,15 +449,34 @@ class StayItinerary extends HTMLElement {
     const dayStart = new Date(date * 1000).setHours(0, 0, 0, 0) / 1000;
     const dayEnd = new Date(date * 1000).setHours(23, 59, 59, 999) / 1000;
     
-    // Filter out all activities for this day
-    const updatedDayPlans = this._stay.day_plans.filter(plan => {
-      return plan.start_time < dayStart || plan.start_time > dayEnd;
+    // Get current options or initialize empty array
+    const currentOptions = this._stay.options || [];
+    
+    // Separate day plans into those for this day and other days
+    const dayPlans = [];
+    const otherDayPlans = [];
+    
+    this._stay.day_plans.forEach(plan => {
+      if (plan.start_time >= dayStart && plan.start_time <= dayEnd) {
+        dayPlans.push(plan);
+      } else {
+        otherDayPlans.push(plan);
+      }
     });
+    
+    // Extract locations from day plans to move back to options
+    const locationsToAdd = dayPlans
+      .filter(plan => plan.kind === "plan" && plan.location)
+      .map(plan => plan.location);
+    
+    // Create updated options list with the removed locations added back
+    const updatedOptions = [...locationsToAdd, ...currentOptions];
     
     // Create an updated stay object
     const updatedStay = {
       ...this._stay,
-      day_plans: updatedDayPlans
+      day_plans: otherDayPlans,
+      options: updatedOptions
     };
     
     // Update the stay in the trip state
@@ -476,6 +501,72 @@ class StayItinerary extends HTMLElement {
       return !item.id || item.id !== plan.id;
     });
     
+    // Get the location from the plan to add back to options
+    const location = plan.location;
+    
+    // Get current options or initialize empty array
+    const currentOptions = this._stay.options || [];
+    
+    // Create an updated options list with the removed location added back
+    const updatedOptions = [location, ...currentOptions];
+    
+    // Create an updated stay object
+    const updatedStay = {
+      ...this._stay,
+      day_plans: updatedDayPlans,
+      options: updatedOptions
+    };
+    
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+    
+    // Save the updated trip data
+    TripState.saveTrip();
+  }
+  
+  /**
+   * Handle the plan-move event from a plan-item
+   * @param {CustomEvent} event The plan-move event
+   */
+  _handlePlanMove(event) {
+    const { plan, direction } = event.detail;
+    
+    if (!plan || !plan.id || !this._stay || !this._stay.day_plans) return;
+    
+    // Find the index of the plan to move
+    const planIndex = this._stay.day_plans.findIndex(item => item.id === plan.id);
+    
+    if (planIndex === -1) return; // Plan not found
+    
+    // Create a copy of the day plans
+    const updatedDayPlans = [...this._stay.day_plans];
+    const planToUpdate = {...updatedDayPlans[planIndex]};
+    
+    // Calculate duration of the plan
+    const duration = planToUpdate.end_time - planToUpdate.start_time;
+    
+    // Create Date objects for start and end times
+    const startDate = new Date(planToUpdate.start_time * 1000);
+    const endDate = new Date(planToUpdate.end_time * 1000);
+    
+    // Adjust time based on direction - move up or down by 1 hour
+    if (direction === 'up') {
+      // Move up (earlier) by 1 hour
+      startDate.setHours(startDate.getHours() - 1);
+      endDate.setHours(endDate.getHours() - 1);
+    } else if (direction === 'down') {
+      // Move down (later) by 1 hour
+      startDate.setHours(startDate.getHours() + 1);
+      endDate.setHours(endDate.getHours() + 1);
+    }
+    
+    // Update the plan with new times
+    planToUpdate.start_time = Math.floor(startDate.getTime() / 1000);
+    planToUpdate.end_time = Math.floor(endDate.getTime() / 1000);
+    
+    // Update the plan in the day plans array
+    updatedDayPlans[planIndex] = planToUpdate;
+    
     // Create an updated stay object
     const updatedStay = {
       ...this._stay,
@@ -487,6 +578,109 @@ class StayItinerary extends HTMLElement {
     
     // Save the updated trip data
     TripState.saveTrip();
+  }
+  
+  /**
+   * Handle the place-add-to-plan event from a place-card
+   * @param {CustomEvent} event The place-add-to-plan event
+   */
+  _handleAddToPlane(event) {
+    const { place } = event.detail;
+    
+    if (!place || !this._stay) return;
+    
+    // Initialize day_plans if it doesn't exist
+    if (!this._stay.day_plans) {
+      this._stay.day_plans = [];
+    }
+    
+    // Get the current date and time
+    const now = new Date();
+    
+    // Create a date object for today
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    
+    // Find the last day plan, or create a new one if none exists
+    let lastDayTimestamp;
+    
+    if (this._stay.day_plans.length > 0) {
+      // Find the latest day in existing plans
+      const lastDay = this._stay.day_plans.reduce((latest, plan) => {
+        const planDate = new Date(plan.start_time * 1000);
+        planDate.setHours(0, 0, 0, 0);
+        const planTimestamp = planDate.getTime() / 1000;
+        
+        return planTimestamp > latest ? planTimestamp : latest;
+      }, 0);
+      
+      lastDayTimestamp = lastDay;
+    } else {
+      // If no plans exist, use today
+      lastDayTimestamp = today.getTime() / 1000;
+    }
+    
+    // Create a date object for the day we'll add the plan to
+    const planDay = new Date(lastDayTimestamp * 1000);
+    
+    // Set default times for the plan (10am to 12pm on the last day)
+    const startTime = new Date(planDay);
+    startTime.setHours(10, 0, 0, 0);
+    
+    const endTime = new Date(planDay);
+    endTime.setHours(12, 0, 0, 0);
+    
+    // Create a new plan with the place
+    const newPlan = {
+      id: crypto.randomUUID(),
+      kind: "plan",
+      start_time: Math.floor(startTime.getTime() / 1000),
+      end_time: Math.floor(endTime.getTime() / 1000),
+      location: place
+    };
+    
+    // Remove the place from options after adding to plan
+    let updatedOptions = [];
+    if (this._stay.options) {
+      updatedOptions = this._stay.options.filter(option => option.id !== place.id);
+    }
+    
+    // Create an updated stay object with the new plan and filtered options
+    const updatedStay = {
+      ...this._stay,
+      day_plans: [...this._stay.day_plans, newPlan],
+      options: updatedOptions
+    };
+    
+    // Update the stay in the trip state
+    TripState.update(this._stay.id, updatedStay);
+    
+    // Save the updated trip data
+    TripState.saveTrip();
+    
+    // Show a confirmation message
+    const toast = document.createElement('div');
+    toast.textContent = `Added ${place.name} to your plan!`;
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    `;
+    document.body.appendChild(toast);
+    
+    // Remove the toast after 3 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 3000);
   }
 }
 

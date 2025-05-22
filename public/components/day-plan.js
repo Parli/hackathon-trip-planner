@@ -195,11 +195,13 @@ class DayPlan extends HTMLElement {
         ${
           sortedActivities.length > 0
             ? sortedActivities
-                .map((activity) => {
+                .map((activity, index) => {
+                  // Use both index and ID to ensure uniqueness
+                  const uniqueId = `activity-${index}-${activity.id || activity.start_time}`;
                   if (activity.kind === "transportation") {
-                    return `<transportation-item id="activity-${activity.start_time}"></transportation-item>`;
+                    return `<transportation-item id="${uniqueId}"></transportation-item>`;
                   } else if (activity.kind === "plan") {
-                    return `<plan-item id="activity-${activity.start_time}"></plan-item>`;
+                    return `<plan-item id="${uniqueId}"></plan-item>`;
                   }
                   return "";
                 })
@@ -210,10 +212,9 @@ class DayPlan extends HTMLElement {
     `;
 
     // Set data for activity components after they're created
-    sortedActivities.forEach((activity) => {
-      const element = this.shadowRoot.getElementById(
-        `activity-${activity.start_time}`
-      );
+    sortedActivities.forEach((activity, index) => {
+      const uniqueId = `activity-${index}-${activity.id || activity.start_time}`;
+      const element = this.shadowRoot.getElementById(uniqueId);
       if (element) {
         if (activity.kind === "transportation") {
           element.transportation = activity;

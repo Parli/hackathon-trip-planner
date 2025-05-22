@@ -100,6 +100,17 @@ class PlaceCard extends HTMLElement {
           composed: true,
         })
       );
+    } else if (target.closest('.image-wrapper') || target.classList.contains('image-wrapper')) {
+      // Dispatch an event to add this place to a day plan
+      this.dispatchEvent(
+        new CustomEvent("place-add-to-plan", {
+          detail: {
+            place: this._place,
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
     }
   }
 
@@ -169,6 +180,27 @@ class PlaceCard extends HTMLElement {
         .image-wrapper {
           width: 100%;
           height: 180px;
+          cursor: pointer;
+          position: relative;
+        }
+        
+        .image-wrapper::after {
+          content: "Click to add to plan";
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background-color: rgba(0, 0, 0, 0.7);
+          color: white;
+          padding: 5px;
+          font-size: 0.8rem;
+          text-align: center;
+          opacity: 0;
+          transition: opacity 0.2s;
+        }
+        
+        .image-wrapper:hover::after {
+          opacity: 1;
         }
 
         .content {
