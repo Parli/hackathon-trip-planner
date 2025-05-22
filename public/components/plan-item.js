@@ -173,6 +173,7 @@ class PlanItem extends HTMLElement {
           align-items: flex-start;
           position: relative;
           padding: 0.25rem 0;
+          margin-left: -20px;
         }
 
         .content {
@@ -184,7 +185,6 @@ class PlanItem extends HTMLElement {
           display: flex;
           visibility: hidden;
           margin-right: 3px;
-          margin-left: -20px;
         }
 
         .container:hover .action-buttons {

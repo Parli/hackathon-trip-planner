@@ -297,6 +297,7 @@ class DayPlan extends HTMLElement {
           align-items: center;
           padding: 0 0 1rem;
           position: relative;
+          margin-left: -20px;
         }
 
         .date-section {
@@ -310,7 +311,6 @@ class DayPlan extends HTMLElement {
           display: flex;
           visibility: hidden;
           margin-right: 3px;
-          margin-left: -20px;
         }
 
         .header:hover .action-buttons {

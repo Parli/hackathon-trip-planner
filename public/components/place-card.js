@@ -170,6 +170,12 @@ class PlaceCard extends HTMLElement {
           transition: transform 0.2s, box-shadow 0.2s;
         }
 
+        .container {
+          display: flex;
+          flex-direction: column;
+          flex-grow: 1;
+        }
+
         .image-wrapper {
           width: 100%;
           height: 180px;
@@ -229,7 +235,7 @@ class PlaceCard extends HTMLElement {
         .content {
           display: flex;
           flex-direction: column;
-          height: 100%;
+          flex-grow: 1;
           padding: 1rem;
         }
 
@@ -268,6 +274,12 @@ class PlaceCard extends HTMLElement {
           margin-bottom: 0.5rem;
           font-size: 0.9rem;
           color: #666;
+          column-gap: 10px;
+        }
+
+        .category {
+          white-space: nowrap;
+          overflow: hidden;
         }
 
         .description {
