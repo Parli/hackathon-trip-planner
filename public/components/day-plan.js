@@ -393,7 +393,6 @@ class DayPlan extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          margin-right: auto;
         }
 
         .temp {
