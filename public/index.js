@@ -1,26 +1,26 @@
 // Trip planner form handler
 document.addEventListener("DOMContentLoaded", () => {
   const tripForm = document.getElementById("tripForm");
-  
+
   // Add event listener to update trip days when dates change
   const startDateInput = document.getElementById("startDate");
   const endDateInput = document.getElementById("endDate");
   const tripDaysInput = document.getElementById("tripDays");
-  
+
   function updateTripDays() {
     const start = new Date(startDateInput.value);
     const end = new Date(endDateInput.value);
-    
+
     if (start && end && !isNaN(start) && !isNaN(end)) {
       // Calculate difference in days
       const diffTime = Math.abs(end - start);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Include both start and end day
-      
+
       // Update trip days field
       tripDaysInput.value = diffDays;
     }
   }
-  
+
   // Add event listeners
   startDateInput.addEventListener("change", updateTripDays);
   endDateInput.addEventListener("change", updateTripDays);
@@ -39,12 +39,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("startYear").value = startDate.getFullYear();
     document.getElementById("startMonth").value = startDate.getMonth() + 1; // Months are 0-indexed
     document.getElementById("startDay").value = startDate.getDate();
-    
+
     const endDate = new Date(document.getElementById("endDate").value);
     document.getElementById("endYear").value = endDate.getFullYear();
     document.getElementById("endMonth").value = endDate.getMonth() + 1;
     document.getElementById("endDay").value = endDate.getDate();
-    
+
     // Gather form data
     const tripData = {
       id,
@@ -83,6 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
             neighborhood: null,
             city: null,
             country: null,
+            state: null,
             region: null,
           },
           notes: null,

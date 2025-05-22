@@ -345,6 +345,7 @@ placeForm.button.addEventListener("click", async () => {
 const placeResearchForm = {
   query: document.getElementById("place-research-query"),
   city: document.getElementById("place-research-city"),
+  state: document.getElementById("place-research-state"),
   country: document.getElementById("place-research-country"),
   button: document.getElementById("place-research-button"),
   loading: document.getElementById("place-research-loading"),
@@ -356,6 +357,7 @@ const placeResearchForm = {
 placeResearchForm.button.addEventListener("click", async () => {
   const query = placeResearchForm.query.value.trim();
   const city = placeResearchForm.city.value.trim();
+  const state = placeResearchForm.state.value.trim();
   const country = placeResearchForm.country.value.trim();
 
   if (!query || !city || !country) {
@@ -373,6 +375,7 @@ placeResearchForm.button.addEventListener("click", async () => {
     // Set up the destination object
     const destination = {
       city: city,
+      state: state,
       country: country,
       region: "", // Optional, not required for the test
     };
@@ -398,15 +401,15 @@ placeResearchForm.button.addEventListener("click", async () => {
 
       // Create a card carousel for the places
       const carousel = document.createElement("card-carousel");
-      
+
       // Create place cards and add them to the carousel
-      const placeCards = places.map(place => {
+      const placeCards = places.map((place) => {
         const placeCard = document.createElement("place-card");
         // Store the full place data on the element
         placeCard.place = place;
         return placeCard;
       });
-      
+
       carousel.cards = placeCards;
       placeResearchForm.resultContent.appendChild(carousel);
     }
@@ -467,11 +470,11 @@ stayResearchForm.button.addEventListener("click", async () => {
 
       // Create a card carousel for destinations
       const carousel = document.createElement("card-carousel");
-      
+
       // Create city cards and add them to the carousel
       const cityCards = stays.map((stay, index) => {
         const cityCard = document.createElement("city-card");
-        
+
         // Store the complete stay data on the card
         cityCard.stay = {
           destination: stay.destination,
@@ -479,9 +482,9 @@ stayResearchForm.button.addEventListener("click", async () => {
           options: stay.options || [],
           arrival_time: Date.now() / 1000 + 86400, // Example arrival time (tomorrow)
           departure_time: Date.now() / 1000 + 86400 * 7, // Example departure time (in a week)
-          weather: stay.weather || []
+          weather: stay.weather || [],
         };
-        
+
         cityCard.style.cursor = "pointer";
         cityCard.setAttribute("data-index", index);
 
@@ -498,10 +501,10 @@ stayResearchForm.button.addEventListener("click", async () => {
             detailsEl.style.display = "block";
           }
         });
-        
+
         return cityCard;
       });
-      
+
       carousel.cards = cityCards;
       carousel.style.marginBottom = "2rem";
       stayResearchForm.resultContent.appendChild(carousel);

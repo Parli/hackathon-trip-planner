@@ -304,6 +304,8 @@ class StayItinerary extends HTMLElement {
 
     const { destination, options } = this._stay;
     const cityName = destination.city;
+    const stateName = destination.state;
+    const countryName = destination.country;
 
     // Filter options by food and non-food
     const foodPlaces = options
@@ -487,7 +489,9 @@ class StayItinerary extends HTMLElement {
 
       <div class="title-container">
         <div class="title">
-          <h1 class="title-text">${cityName}</h1>
+          <h1 class="title-text">${cityName}${
+      stateName ? `, ${stateName}` : ""
+    }, ${countryName}</h1>
           <button class="map-button" title="View on map">🗺️</button>
         </div>
         <div class="title-buttons">
@@ -682,14 +686,18 @@ class StayItinerary extends HTMLElement {
 
     if (mapModal && stayMap) {
       // Set the title of the modal
-      mapModal.setTitle(`Map of ${this._stay.destination.city}`);
+      mapModal.setTitle(
+        `${this._stay.destination.city}${
+          this._stay.destination.city ? `, ${this._stay.destination.city}` : ""
+        }, ${this._stay.destination.country}`
+      );
 
       // Set the stay data for the map
       stayMap.stay = this._stay;
-      
+
       // Open the modal
       mapModal.open();
-      
+
       // After modal is opened, we need to invalidate the map size
       // to ensure proper rendering since the container is now visible
       setTimeout(() => {

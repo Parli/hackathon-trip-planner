@@ -169,6 +169,10 @@ const destinationSchema = {
       type: ["string", "null"],
       description: "City of the destination, if applicable",
     },
+    state: {
+      type: ["string", "null"],
+      description: "State/Province of the destination, if applicable",
+    },
     country: {
       type: ["string", "null"],
       description: "Country of the destination, if applicable",
@@ -919,6 +923,10 @@ ${JSON.stringify(research, null, 2)}
                 type: ["string"],
                 description: "Full city name of the destination",
               },
+              state: {
+                type: ["string"],
+                description: "State/Province of the destination, if applicable",
+              },
               country: {
                 type: ["string"],
                 description: "Full country name of the destination",
@@ -1218,6 +1226,7 @@ async function getPlaceInfo(placeName, address = "") {
       name: address || "Unknown location",
       neighborhood: null,
       city: null,
+      state: null,
       country: null,
       region: null,
     };
@@ -1288,6 +1297,7 @@ async function getPlaceInfo(placeName, address = "") {
         name: address || "Unknown location",
         neighborhood: null,
         city: null,
+        state: null,
         country: null,
         region: null,
       },

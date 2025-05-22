@@ -37,7 +37,7 @@ class StayMap extends HTMLElement {
   set stay(value) {
     this._stay = value;
     this.render();
-    
+
     // Initialize map after rendering if the component is connected to DOM
     if (this.isConnected) {
       this._initMap();
@@ -51,44 +51,51 @@ class StayMap extends HTMLElement {
    */
   _getAllLocations() {
     if (!this._stay) return [];
-    
+
     const locations = [];
-    
+
     // Add options
     if (this._stay.options && this._stay.options.length > 0) {
-      this._stay.options.forEach(option => {
-        if (option.coordinates && option.coordinates.latitude && option.coordinates.longitude) {
+      this._stay.options.forEach((option) => {
+        if (
+          option.coordinates &&
+          option.coordinates.latitude &&
+          option.coordinates.longitude
+        ) {
           locations.push({
-            type: 'option',
+            type: "option",
             name: option.name,
-            kind: option.kind || 'place',
+            kind: option.kind || "place",
             coordinates: option.coordinates,
-            item: option
+            item: option,
           });
         }
       });
     }
-    
+
     // Add day plans
     if (this._stay.day_plans && this._stay.day_plans.length > 0) {
-      this._stay.day_plans.forEach(plan => {
-        if (plan.kind === 'plan' && plan.location && 
-            plan.location.coordinates && 
-            plan.location.coordinates.latitude && 
-            plan.location.coordinates.longitude) {
+      this._stay.day_plans.forEach((plan) => {
+        if (
+          plan.kind === "plan" &&
+          plan.location &&
+          plan.location.coordinates &&
+          plan.location.coordinates.latitude &&
+          plan.location.coordinates.longitude
+        ) {
           locations.push({
-            type: 'plan',
+            type: "plan",
             name: plan.location.name,
-            kind: plan.location.kind || 'place',
+            kind: plan.location.kind || "place",
             coordinates: plan.location.coordinates,
             startTime: plan.start_time,
             endTime: plan.end_time,
-            item: plan
+            item: plan,
           });
         }
       });
     }
-    
+
     return locations;
   }
 
@@ -101,56 +108,59 @@ class StayMap extends HTMLElement {
   _calculateBoundingBox(locations) {
     if (!locations || locations.length === 0) {
       // Default to destination coordinates if available
-      if (this._stay && this._stay.destination && 
-          this._stay.destination.coordinates &&
-          this._stay.destination.coordinates.latitude && 
-          this._stay.destination.coordinates.longitude) {
+      if (
+        this._stay &&
+        this._stay.destination &&
+        this._stay.destination.coordinates &&
+        this._stay.destination.coordinates.latitude &&
+        this._stay.destination.coordinates.longitude
+      ) {
         const lat = this._stay.destination.coordinates.latitude;
         const lng = this._stay.destination.coordinates.longitude;
         return {
           minLat: lat - 0.01,
           maxLat: lat + 0.01,
           minLng: lng - 0.01,
-          maxLng: lng + 0.01
+          maxLng: lng + 0.01,
         };
       }
-      
+
       // Fallback to a default location (will be adjusted by city name)
       return {
         minLat: 0,
         maxLat: 0,
         minLng: 0,
-        maxLng: 0
+        maxLng: 0,
       };
     }
-    
+
     // Calculate bounds based on all locations
     const bounds = {
       minLat: Infinity,
       maxLat: -Infinity,
       minLng: Infinity,
-      maxLng: -Infinity
+      maxLng: -Infinity,
     };
-    
-    locations.forEach(location => {
+
+    locations.forEach((location) => {
       const lat = location.coordinates.latitude;
       const lng = location.coordinates.longitude;
-      
+
       bounds.minLat = Math.min(bounds.minLat, lat);
       bounds.maxLat = Math.max(bounds.maxLat, lat);
       bounds.minLng = Math.min(bounds.minLng, lng);
       bounds.maxLng = Math.max(bounds.maxLng, lng);
     });
-    
+
     // Add buffer (about 10% of the range)
     const latBuffer = (bounds.maxLat - bounds.minLat) * 0.1;
     const lngBuffer = (bounds.maxLng - bounds.minLng) * 0.1;
-    
+
     return {
       minLat: bounds.minLat - latBuffer,
       maxLat: bounds.maxLat + latBuffer,
       minLng: bounds.minLng - lngBuffer,
-      maxLng: bounds.maxLng + lngBuffer
+      maxLng: bounds.maxLng + lngBuffer,
     };
   }
 
@@ -160,52 +170,57 @@ class StayMap extends HTMLElement {
    */
   _initMap() {
     if (!this._stay) return;
-    
+
     // Clear previous map if it exists
     if (this._map) {
       this._map.remove();
       this._map = null;
       this._markers = [];
     }
-    
-    const mapContainer = this.shadowRoot.getElementById('map');
+
+    const mapContainer = this.shadowRoot.getElementById("map");
     if (!mapContainer) return;
-    
+
     // Get all locations and calculate bounding box
     const locations = this._getAllLocations();
     const bounds = this._calculateBoundingBox(locations);
-    
+
     // Center point (middle of bounding box)
     let centerLat, centerLng;
-    
+
     if (bounds.minLat === Infinity) {
       // If no locations with coordinates, try to geocode the city name
-      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this._stay.destination.city)},${encodeURIComponent(this._stay.destination.country)}`;
-      
+      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        this._stay.destination.city
+      )},${encodeURIComponent(this._stay.destination.country)}`;
+
       fetch(geocodeUrl)
-        .then(response => response.json())
-        .then(data => {
+        .then((response) => response.json())
+        .then((data) => {
           if (data && data.length > 0) {
             centerLat = parseFloat(data[0].lat);
             centerLng = parseFloat(data[0].lon);
-            
+
             // Create custom bounds around the city coordinates for better zoom
             const cityBounds = {
               minLat: centerLat - 0.01, // Approximately 1km buffer
               maxLat: centerLat + 0.01,
               minLng: centerLng - 0.01,
-              maxLng: centerLng + 0.01
+              maxLng: centerLng + 0.01,
             };
-            
+
             // Create the map with the city coordinates and bounds
             this._createMap(centerLat, centerLng, 13, cityBounds);
           } else {
             // Fallback to a default location with a reasonable zoom
-            console.warn("No geocoding results found for:", this._stay.destination.city);
+            console.warn(
+              "No geocoding results found for:",
+              this._stay.destination.city
+            );
             this._createMap(0, 0, 3);
           }
         })
-        .catch(error => {
+        .catch((error) => {
           console.error("Error geocoding city:", error);
           this._createMap(0, 0, 3);
         });
@@ -213,7 +228,7 @@ class StayMap extends HTMLElement {
       // Use calculated bounds
       centerLat = (bounds.minLat + bounds.maxLat) / 2;
       centerLng = (bounds.minLng + bounds.maxLng) / 2;
-      
+
       // Create the map and add markers
       this._createMap(centerLat, centerLng, 13, bounds);
     }
@@ -228,32 +243,36 @@ class StayMap extends HTMLElement {
    * @private
    */
   _createMap(lat, lng, zoom, bounds = null) {
-    const mapContainer = this.shadowRoot.getElementById('map');
+    const mapContainer = this.shadowRoot.getElementById("map");
     if (!mapContainer) return;
-    
+
     // Create the map with a higher default zoom
     this._map = Leaflet.map(mapContainer, {
       minZoom: 2,
-      maxZoom: 18
+      maxZoom: 18,
     }).setView([lat, lng], zoom);
-    
+
     // Add the OpenStreetMap tile layer
-    Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    Leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(this._map);
-    
+
     // Add markers for all locations
     this._addMarkers();
-    
+
     // Fit bounds if provided with padding to ensure markers are visible
     if (bounds) {
-      this._map.fitBounds([
-        [bounds.minLat, bounds.minLng],
-        [bounds.maxLat, bounds.maxLng]
-      ], {
-        padding: [50, 50], // Add padding around the bounds
-        maxZoom: 15        // Limit how far it can zoom in
-      });
+      this._map.fitBounds(
+        [
+          [bounds.minLat, bounds.minLng],
+          [bounds.maxLat, bounds.maxLng],
+        ],
+        {
+          padding: [50, 50], // Add padding around the bounds
+          maxZoom: 15, // Limit how far it can zoom in
+        }
+      );
     } else {
       // If no bounds provided but we have a center, ensure we're at a reasonable zoom level
       this._map.setZoom(13); // City-level zoom
@@ -266,82 +285,124 @@ class StayMap extends HTMLElement {
    */
   _addMarkers() {
     if (!this._map || !this._stay) return;
-    
+
     const locations = this._getAllLocations();
-    
-    // Add a marker for the city itself if coordinates are available
-    if (this._stay.destination && 
-        this._stay.destination.coordinates && 
-        this._stay.destination.coordinates.latitude && 
-        this._stay.destination.coordinates.longitude) {
-      
-      const cityMarker = Leaflet.marker([
-        this._stay.destination.coordinates.latitude,
-        this._stay.destination.coordinates.longitude
-      ], {
-        icon: this._createIcon('city')
-      }).addTo(this._map);
-      
-      cityMarker.bindPopup(`<b>${this._stay.destination.city}</b><br>${this._stay.destination.country}`);
-      this._markers.push(cityMarker);
-    }
-    
+
     // Add markers for all locations
-    locations.forEach(location => {
-      const marker = Leaflet.marker([
-        location.coordinates.latitude,
-        location.coordinates.longitude
-      ], {
-        icon: this._createIcon(location.type, location.kind)
-      }).addTo(this._map);
-      
-      // Create popup content
+    locations.forEach((location) => {
+      const marker = Leaflet.marker(
+        [location.coordinates.latitude, location.coordinates.longitude],
+        {
+          icon: this._createIcon(location.type, location.kind),
+        }
+      ).addTo(this._map);
+
+      // Get the place object from the location
+      const place = location.item;
+
+      // Create basic popup content
       let popupContent = `<b>${location.name}</b>`;
-      
-      if (location.type === 'plan' && location.startTime && location.endTime) {
+
+      // Add time and date if it's a planned activity
+      let timeInfo = "";
+      if (location.type === "plan" && location.startTime && location.endTime) {
         const startDate = new Date(location.startTime * 1000);
         const endDate = new Date(location.endTime * 1000);
-        
-        popupContent += `<br>Time: ${startDate.toLocaleTimeString()} - ${endDate.toLocaleTimeString()}`;
-        popupContent += `<br>Date: ${startDate.toLocaleDateString()}`;
+
+        timeInfo = `
+          <div class="popup-time">
+            <p>Time: ${startDate.toLocaleTimeString()} - ${endDate.toLocaleTimeString()}</p>
+            <p>Date: ${startDate.toLocaleDateString()}</p>
+          </div>
+        `;
       }
-      
-      marker.bindPopup(popupContent);
+
+      // Check if the place has photos and include the first one
+      if (place && place.photos && place.photos.length > 0) {
+        const photo = place.photos[0];
+        popupContent = `
+          <div class="popup-content">
+            ${
+              photo
+                ? `
+                <div class="popup-image-container">
+                  <img src="${photo}" alt="${location.name}" class="popup-image">
+                </div>`
+                : ""
+            }
+            <div class="popup-info">
+              <h3>${location.name}</h3>
+              ${
+                place.description
+                  ? `<p class="popup-description">${place.description.substring(
+                      0,
+                      100
+                    )}${place.description.length > 100 ? "..." : ""}</p>`
+                  : ""
+              }
+              ${timeInfo}
+            </div>
+          </div>
+        `;
+      } else {
+        // No photo available
+        popupContent = `
+          <div class="popup-content">
+            <div class="popup-info">
+              <h3>${location.name}</h3>
+              ${
+                place && place.description
+                  ? `<p class="popup-description">${place.description.substring(
+                      0,
+                      100
+                    )}${place.description.length > 100 ? "..." : ""}</p>`
+                  : ""
+              }
+              ${timeInfo}
+            </div>
+          </div>
+        `;
+      }
+
+      marker.bindPopup(popupContent, { maxWidth: 300 });
       this._markers.push(marker);
     });
   }
 
   /**
    * Create a custom icon for the marker type
-   * @param {string} type Type of location ('option', 'plan', 'city')
+   * @param {string} type Type of location ('option', 'plan')
    * @param {string} kind Kind of place ('food', 'activity', etc.)
    * @returns {L.Icon} Leaflet icon object
    * @private
    */
-  _createIcon(type, kind = '') {
+  _createIcon(type, kind = "") {
     // Default icon
-    let iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
-    
+    let iconUrl =
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png";
+
     // Different colors for different types
-    if (type === 'plan') {
-      iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png';
-    } else if (type === 'option') {
-      if (kind === 'food') {
-        iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png';
+    if (type === "plan") {
+      iconUrl =
+        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png";
+    } else if (type === "option") {
+      if (kind === "food") {
+        iconUrl =
+          "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png";
       } else {
-        iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png';
+        iconUrl =
+          "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png";
       }
-    } else if (type === 'city') {
-      iconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png';
     }
-    
+
     return Leaflet.icon({
       iconUrl: iconUrl,
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      shadowUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
       iconSize: [25, 41],
       iconAnchor: [12, 41],
       popupAnchor: [1, -34],
-      shadowSize: [41, 41]
+      shadowSize: [41, 41],
     });
   }
 
@@ -353,7 +414,7 @@ class StayMap extends HTMLElement {
           width: 100%;
           height: 100%;
         }
-        
+
         .map-container {
           width: 100%;
           height: 100%;
@@ -363,13 +424,13 @@ class StayMap extends HTMLElement {
           display: flex;
           flex-direction: column;
         }
-        
+
         #map {
           width: 100%;
           flex: 1; /* Take up all available space */
           min-height: 500px;
         }
-        
+
         .legend {
           background: white;
           padding: 10px;
@@ -377,28 +438,80 @@ class StayMap extends HTMLElement {
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
           margin-top: 10px;
         }
-        
+
         .legend-item {
           display: flex;
           align-items: center;
           margin-bottom: 5px;
         }
-        
+
         .legend-color {
           width: 12px;
           height: 12px;
           border-radius: 50%;
           margin-right: 5px;
         }
-        
+
         .legend-text {
           font-size: 0.8rem;
         }
-        
-        .city-color { background-color: #f00; }
+
         .plan-color { background-color: #0a0; }
         .food-color { background-color: #f80; }
         .option-color { background-color: #cc0; }
+
+        /* Popup styles */
+        .popup-content {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-width: 280px;
+        }
+
+        .popup-image-container {
+          width: 100%;
+          height: 160px;
+          overflow: hidden;
+          border-radius: 4px;
+          margin-bottom: 4px;
+        }
+
+        .popup-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border-radius: 4px;
+        }
+
+        .popup-info h3 {
+          margin: 0 0 6px;
+          font-size: 16px;
+          font-weight: bold;
+        }
+
+        .popup-info p {
+          margin: 0 0 6px;
+          font-size: 14px;
+          color: #333;
+        }
+
+        .popup-description {
+          font-style: italic;
+          color: #666;
+          font-size: 13px;
+          margin-bottom: 8px;
+        }
+
+        .popup-time {
+          font-size: 12px;
+          margin-top: 6px;
+          color: #555;
+        }
+
+        .popup-time p {
+          margin: 0 0 3px;
+          font-size: 12px;
+        }
 
         /* Leaflet styles */
         .leaflet-pane,
@@ -828,16 +941,12 @@ class StayMap extends HTMLElement {
           color: #333;
         }
       </style>
-      
+
       <div class="map-container">
         <div id="map"></div>
       </div>
-      
+
       <div class="legend">
-        <div class="legend-item">
-          <div class="legend-color city-color"></div>
-          <div class="legend-text">City</div>
-        </div>
         <div class="legend-item">
           <div class="legend-color plan-color"></div>
           <div class="legend-text">Planned Activity</div>
