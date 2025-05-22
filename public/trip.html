@@ -172,12 +172,14 @@
     </div>
     
     <div class="destination-search">
-      <h2>Add Destinations</h2>
+      <h2>Find Destinations</h2>
       <form id="searchForm">
-        <input type="text" id="searchQuery" placeholder="Search for cities, countries, or regions" required>
-        <button type="submit">Search</button>
+        <input type="text" id="searchQuery" placeholder="Describe your dream vacation" required>
       </form>
       <div id="searchResults"></div>
+      <div id="cityCarousel" style="display: none;">
+        <card-carousel id="stayCarousel"></card-carousel>
+      </div>
     </div>
     
     <div class="trip-itinerary">

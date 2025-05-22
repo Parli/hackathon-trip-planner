@@ -130,7 +130,7 @@ class CityCard extends HTMLElement {
         .image-gallery {
           display: flex;
           width: 100%;
-          height: 200px;
+          height: 100px;
         }
 
         .image-gallery img {
@@ -183,34 +183,6 @@ class CityCard extends HTMLElement {
           margin: 1rem 0;
           line-height: 1.4;
         }
-
-        .dates {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 1rem;
-          padding-top: 1rem;
-          border-top: 1px solid #eee;
-          font-size: 0.9rem;
-        }
-
-        .date-item {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .date-label {
-          font-size: 0.8rem;
-          color: #666;
-        }
-
-        .duration {
-          text-align: center;
-          padding: 0.5rem;
-          background-color: #f5f5f5;
-          border-radius: 4px;
-          margin-top: 0.5rem;
-          font-weight: bold;
-        }
       </style>
 
       <div class="image-gallery">
@@ -239,22 +211,6 @@ class CityCard extends HTMLElement {
         </div>
 
         <div class="description">${description}</div>
-
-        <div class="dates">
-          <div class="date-item">
-            <span class="date-label">Arrival</span>
-            <span>${this._formatDate(arrival_time)}</span>
-            <span>${this._formatTime(arrival_time)}</span>
-          </div>
-
-          <div class="date-item">
-            <span class="date-label">Departure</span>
-            <span>${this._formatDate(departure_time)}</span>
-            <span>${this._formatTime(departure_time)}</span>
-          </div>
-        </div>
-
-        <div class="duration">${this._getDuration()}</div>
       </div>
     `;
   }

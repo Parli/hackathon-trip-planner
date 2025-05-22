@@ -572,7 +572,7 @@ User Example: "South east asia chill island vibes, affordable, relaxing, nature 
 \`\`\`
 `;
 
-    const { object } = await generateObject({
+    const { object: queries } = await generateObject({
       model: registry.languageModel(defaultObjectModel),
       output: "array",
       system: systemPrompt,
@@ -581,7 +581,7 @@ User Example: "South east asia chill island vibes, affordable, relaxing, nature 
         type: "string",
       }),
     });
-    return object.slice(0, count);
+    return queries.slice(0, count);
   } catch (error) {
     console.error("Error in getQueryPlan:", error);
     throw error;
@@ -863,7 +863,7 @@ Research:
 
 ${JSON.stringify(research, null, 2)}
   `;
-  const { object: stayDestinations } = await generateObject({
+  const { object: stays } = await generateObject({
     model: registry.languageModel(defaultObjectModel),
     output: "array",
     system: systemPrompt,
@@ -903,9 +903,17 @@ ${JSON.stringify(research, null, 2)}
       required: ["destination", "description"],
     }),
   });
+  console.log(
+    `Found ${stays.length} destinations:`,
+    stays.map(
+      ({ destination }) =>
+        `${destination?.city}, ${destination?.country}, ${destination?.region}`
+    )
+  );
+  console.debug("stays results:", JSON.stringify(stays));
   return (
     await Promise.all(
-      stayDestinations.slice(0, count).map(async (stay) => {
+      stays.slice(0, count).map(async (stay) => {
         try {
           return {
             ...stay,
@@ -1317,6 +1325,11 @@ ${JSON.stringify(research, null, 2)}
       required: ["address", "description"],
     }),
   });
+  console.log(
+    `Found ${places.length} destinations:`,
+    places.map(({ name }) => `${name}`)
+  );
+  console.debug("places results:", JSON.stringify(places));
   return (
     await Promise.all(
       places.slice(0, count).map(async (place) => {
