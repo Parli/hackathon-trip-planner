@@ -1533,7 +1533,7 @@ Places already being visited:
 ${allOldPlacesContext}
 
 Traveler Preferences:
-${JSON.stringify(preferences)}
+${JSON.stringify(preferences, null, 2)}
 
 Research:
 
@@ -1625,8 +1625,9 @@ ${JSON.stringify(research, null, 2)}
     const filterPrompt = `
 Given the following places, come up with a plan for visiting them based on start and end times for each place.
 
+Respect the travelers preferences.
 The plan should schedule places in an efficient order based on the nearness of their coordinates.
-The plan should allow for time to get between places.
+The plan should allow for adequate time to get between places.
 The plan should not be too overloaded.
 The most interesting potential places should be prioritized.
 The plan should take place during reasonable hours.
@@ -1637,7 +1638,7 @@ The places listed must visit do not have to be the first places visited. They sh
 The places under the must visit section MUST be included in the output plan.
 
 Traveler Preferences:
-${JSON.stringify(preferences)}
+${JSON.stringify(preferences, null, 2)}
 
 Potential Places to Visit:
 ${neighborhoodPlacesContext}
