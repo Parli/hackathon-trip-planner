@@ -546,8 +546,8 @@ class StayMap extends HTMLElement {
 
     return Leaflet.icon({
       iconUrl: iconUrl,
-      iconSize: [16, 20],
-      iconAnchor: [8, 10],
+      iconSize: [24, 30],
+      iconAnchor: [12, 10],
       popupAnchor: [1, -15],
       shadowSize: [41, 41],
     });
