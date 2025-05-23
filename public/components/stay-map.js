@@ -511,7 +511,7 @@ class StayMap extends HTMLElement {
    * @returns {L.Icon} Leaflet icon object
    * @private
    */
-  _createIcon(type, kind = "", dayNum = null) {
+  _createIcon(type, kind, dayNum = null) {
     // Base path for marker icons
     const basePath = "/images/map/";
 
@@ -539,8 +539,10 @@ class StayMap extends HTMLElement {
       }
     }
 
+    const iconKind = kind ? `-${kind}` : "";
+
     // Construct full URL for the icon
-    const iconUrl = `${basePath}${iconColor}.png`;
+    const iconUrl = `${basePath}${iconColor}${iconKind}.png`;
 
     return Leaflet.icon({
       iconUrl: iconUrl,
