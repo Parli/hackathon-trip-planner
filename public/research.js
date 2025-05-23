@@ -1436,9 +1436,13 @@ ${JSON.stringify(research, null, 2)}
  * @param {number} options.startTime Timestamp in seconds of the plan start time
  * @param {number} options.endTime Timestamp in seconds of the plan end time
  * @param {number} [options.count=10] Number of places to find
+ * @param {Array.<Preferences>} [preferences] Array of interests
  * @returns {Promise<Array.<Plan>>} Array of plans for the day
  */
-async function getDayPlanResearch(stay, { startTime, endTime, count = 10 }) {
+async function getDayPlanResearch(
+  stay,
+  { startTime, endTime, preferences, count = 10 }
+) {
   try {
     // First process the stay day plans to extract all existing plans that start within the start and end time
     const existingPlans = (stay.day_plans || []).filter(
@@ -1512,12 +1516,13 @@ Context: User is looking to plan a day in this neighborhood. Make sure search qu
     const placesPrompt = `
 Using the research provided, extract the best places to visit based on the user's stay.
 
-Evaluate each place for whether they are things the user may be interested based on the places they are already interested in.
+Evaluate each place for whether they are things the user may be interested based on their interests and the places they are already interested in.
+Be flexible in what you suggest and provide variety.
 
 Your output should provide a sorted array of place objects with an address and description.
-It should be sorted based on relevancy to the user request.
+It should be sorted based on relevancy to the traveler's interests and existing places they want to visit.
 The address should be the most complete you can generate.
-Description should be short and tailored to the context.
+Description should be short and tailored to both the traveler interests and context.
 There should be no duplicates in the output.
 Places must be specific locations, like a landmark, restaurant, hotel, museum, store, park, etc.
 Do not use neighborhoods, cities, countries, or regions as places
@@ -1526,6 +1531,9 @@ The output should NOT include any of the existing places provided.
 Places already being visited:
 
 ${allOldPlacesContext}
+
+Traveler Preferences:
+${JSON.stringify(preferences)}
 
 Research:
 
@@ -1617,7 +1625,7 @@ ${JSON.stringify(research, null, 2)}
     const filterPrompt = `
 Given the following places, come up with a plan for visiting them based on start and end times for each place.
 
-The plan should visit places efficiently based on the nearness of their coordinates.
+The plan should schedule places in an efficient order based on the nearness of their coordinates.
 The plan should allow for time to get between places.
 The plan should not be too overloaded.
 The most interesting potential places should be prioritized.

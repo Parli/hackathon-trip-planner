@@ -278,6 +278,10 @@ class PlanItem extends HTMLElement {
         }
 
         .title {
+          display: -webkit-box;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 1;
+          overflow: hidden;
           font-weight: bold;
           font-size: 1.1rem;
         }

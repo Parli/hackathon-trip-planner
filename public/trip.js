@@ -79,12 +79,14 @@ document.addEventListener("day-enhance", async (event) => {
     if (!stay) {
       return;
     }
+    const trip = TripState.get(TripState.getIdFromUrl());
 
     // Call getDayPlanResearch to get enhanced plans for the day
     const enhancedPlans = await getDayPlanResearch(stay, {
       startTime,
       endTime,
       count: 10,
+      preferences: trip.preferences ?? {},
     });
 
     if (enhancedPlans && enhancedPlans.length > 0) {
@@ -143,14 +145,14 @@ function renderTrip(trip) {
   document.getElementById(
     "tripBudget"
   ).textContent = `Budget: ${trip.preferences.budget_level}`;
-  
+
   // Render trip interests if they exist
   const interestsContainer = document.getElementById("tripInterests");
   interestsContainer.innerHTML = ""; // Clear any existing interests
-  
+
   if (trip.preferences.interests && trip.preferences.interests.length > 0) {
     // Create elements for each interest
-    trip.preferences.interests.forEach(interest => {
+    trip.preferences.interests.forEach((interest) => {
       const interestTag = document.createElement("span");
       interestTag.className = "interest-tag";
       interestTag.textContent = interest;

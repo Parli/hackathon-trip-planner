@@ -184,41 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       preferences: {
         origin: {
-          kind: "transit",
-          name: document.getElementById("originName").value,
-          category: null,
-          description: `Origin location: ${
-            document.getElementById("originName").value
-          }`,
-          photos: [],
           address: document.getElementById("originName").value,
-          coordinates: {
-            latitude: 0,
-            longitude: 0,
-          },
-          destination: {
-            name: document.getElementById("originName").value,
-            neighborhood: null,
-            city: null,
-            country: null,
-            state: null,
-            region: null,
-          },
-          notes: null,
-          tips: null,
-          open_time: null,
-          close_time: null,
-          url: null,
-          rating: null,
-          budget: null,
-          cost: null,
-          interest_level: null,
-          physical_level: null,
-          booking_required: null,
-          booking_deadline: null,
-          availability: null,
-          setting: null,
-          time_minutes_allocation: null,
         },
         traveler_count: parseInt(
           document.getElementById("travelerCount").value
