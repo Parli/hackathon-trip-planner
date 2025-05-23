@@ -37,7 +37,7 @@
     .trip-meta {
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 10px;
       font-size: 16px;
     }
 
@@ -45,15 +45,28 @@
     .trip-preferences {
       display: flex;
       flex-wrap: wrap;
-      gap: 15px;
+      gap: 10px;
     }
 
     .trip-dates span,
-    .trip-preferences span {
+    .trip-preferences span,
+    .trip-interests span {
       background-color: #e8f4f8;
       padding: 5px 12px;
       border-radius: 20px;
       font-size: 14px;
+    }
+
+    .trip-interests {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    span.interest-tag {
+      font-size: 10px;
     }
 
     .destination-search {
@@ -205,6 +218,9 @@
           <span id="tripTravelers"></span>
           <span id="tripPace"></span>
           <span id="tripBudget"></span>
+        </div>
+        <div class="trip-interests" id="tripInterests">
+          <!-- Interests will be added here dynamically -->
         </div>
       </div>
     </div>

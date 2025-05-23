@@ -1,6 +1,124 @@
 // Trip planner form handler
+
+// Setup interests management functionality
+function setupInterestsManagement() {
+  const interestsContainer = document.getElementById("interests-container");
+  const interestInput = document.getElementById("interest-input");
+  const addInterestBtn = document.getElementById("add-interest-btn");
+  const suggestedInterests = document.querySelectorAll(".suggested-interest");
+  const hiddenInterestsInput = document.getElementById("interests");
+
+  // Array to store selected interests
+  let selectedInterests = [];
+
+  // Function to update suggested interests visibility
+  function updateSuggestedInterests() {
+    suggestedInterests.forEach((item) => {
+      const interest = item.dataset.interest;
+      if (selectedInterests.includes(interest)) {
+        item.style.display = "none";
+      } else {
+        item.style.display = "inline-block";
+      }
+    });
+  }
+
+  // Function to update the hidden input with JSON string
+  function updateHiddenInput() {
+    hiddenInterestsInput.value = JSON.stringify(selectedInterests);
+  }
+
+  // Function to add a new interest tag
+  function addInterest(interest) {
+    // Don't add if empty or already exists
+    if (!interest.trim() || selectedInterests.includes(interest)) {
+      return;
+    }
+
+    // Add to array
+    selectedInterests.push(interest);
+
+    // Create tag element
+    const tagElement = document.createElement("div");
+    tagElement.className = "interest-tag";
+    tagElement.setAttribute("data-interest", interest);
+    tagElement.innerHTML = interest;
+    tagElement.title = "Click to remove";
+
+    // Add to container
+    interestsContainer.appendChild(tagElement);
+
+    // Update hidden input
+    updateHiddenInput();
+
+    // Update suggested interests
+    updateSuggestedInterests();
+
+    // Clear input field
+    interestInput.value = "";
+  }
+
+  // Function to remove an interest
+  function removeInterest(interest) {
+    // Remove from array
+    selectedInterests = selectedInterests.filter((item) => item !== interest);
+
+    // Remove from UI - find tag with the matching data attribute
+    const tags = interestsContainer.querySelectorAll(".interest-tag");
+    tags.forEach((tag) => {
+      if (tag.dataset.interest === interest) {
+        tag.remove();
+      }
+    });
+
+    // Update hidden input
+    updateHiddenInput();
+
+    // Update suggested interests
+    updateSuggestedInterests();
+  }
+
+  // Event listener for add button
+  addInterestBtn.addEventListener("click", () => {
+    addInterest(interestInput.value);
+  });
+
+  // Event listener for enter key in input
+  interestInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addInterest(interestInput.value);
+    }
+  });
+
+  // Event listener for suggested interests
+  suggestedInterests.forEach((item) => {
+    item.addEventListener("click", () => {
+      addInterest(item.dataset.interest);
+    });
+  });
+
+  // Event delegation for clicking on interest tags
+  interestsContainer.addEventListener("click", (e) => {
+    // Check if we clicked on a tag or something inside a tag
+    const tag = e.target.classList.contains("interest-tag")
+      ? e.target
+      : e.target.closest(".interest-tag");
+
+    if (tag) {
+      removeInterest(tag.dataset.interest);
+    }
+  });
+
+  // Initialize
+  updateSuggestedInterests();
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const tripForm = document.getElementById("tripForm");
+
+  // Initialize interests management
+  setupInterestsManagement();
 
   // Add event listener to update trip days when dates change
   const startDateInput = document.getElementById("startDate");
@@ -113,6 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
               .getElementById("specialNeeds")
               .value.split("\n")
               .filter((item) => item.trim() !== "")
+          : [],
+        interests: document.getElementById("interests").value
+          ? JSON.parse(document.getElementById("interests").value)
           : [],
       },
       stays: [],

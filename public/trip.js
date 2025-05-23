@@ -143,6 +143,23 @@ function renderTrip(trip) {
   document.getElementById(
     "tripBudget"
   ).textContent = `Budget: ${trip.preferences.budget_level}`;
+  
+  // Render trip interests if they exist
+  const interestsContainer = document.getElementById("tripInterests");
+  interestsContainer.innerHTML = ""; // Clear any existing interests
+  
+  if (trip.preferences.interests && trip.preferences.interests.length > 0) {
+    // Create elements for each interest
+    trip.preferences.interests.forEach(interest => {
+      const interestTag = document.createElement("span");
+      interestTag.className = "interest-tag";
+      interestTag.textContent = interest;
+      interestsContainer.appendChild(interestTag);
+    });
+  } else {
+    // Hide the interests container if no interests
+    interestsContainer.style.display = "none";
+  }
 
   // Show or hide itinerary based on whether there are stays
   const tripItinerary = document.querySelector("trip-itinerary");

@@ -19,7 +19,7 @@ class StayMap extends HTMLElement {
     this._placeIdToHighlight = null;
     this.render();
   }
-  
+
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === "place-id" && oldValue !== newValue) {
       this._placeIdToHighlight = newValue;
@@ -100,46 +100,53 @@ class StayMap extends HTMLElement {
       this._initMap();
     }
   }
-  
+
   get placeId() {
-    return this.getAttribute('place-id');
+    return this.getAttribute("place-id");
   }
-  
+
   set placeId(value) {
     if (value) {
-      this.setAttribute('place-id', value);
+      this.setAttribute("place-id", value);
     } else {
-      this.removeAttribute('place-id');
+      this.removeAttribute("place-id");
     }
   }
-  
+
   /**
    * Highlights a place on the map by opening its popup
    * @private
    */
   _highlightPlace() {
-    if (!this._map || !this._placeIdToHighlight || !this._markers || this._markers.length === 0) return;
-    
+    if (
+      !this._map ||
+      !this._placeIdToHighlight ||
+      !this._markers ||
+      this._markers.length === 0
+    )
+      return;
+
     // Find the place in the stay data
     const allLocations = this._getAllLocations();
     for (let i = 0; i < allLocations.length; i++) {
       const location = allLocations[i];
-      const place = location.item.kind === "plan" ? location.item.location : location.item;
-      
+      const place =
+        location.item.kind === "plan" ? location.item.location : location.item;
+
       if (place.id === this._placeIdToHighlight && i < this._markers.length) {
         // Get the marker for this place
         const marker = this._markers[i];
-        
+
         // Use a timeout to ensure the map is fully rendered before opening the popup
         // This fixes the issue with skinny popups on initial open
         setTimeout(() => {
           // Make sure the map has been invalidated and properly sized
           this._map.invalidateSize();
-          
+
           // Open the popup for this marker
           marker.openPopup();
         }, 300); // Slightly longer timeout to ensure map is fully rendered
-        
+
         // Break after finding the first match
         break;
       }
@@ -489,7 +496,7 @@ class StayMap extends HTMLElement {
       marker.bindPopup(popupContent, { maxWidth: 300 });
       this._markers.push(marker);
     });
-    
+
     // Check if we need to highlight a place after adding all markers
     if (this._placeIdToHighlight) {
       this._highlightPlace();
@@ -539,7 +546,7 @@ class StayMap extends HTMLElement {
       iconUrl: iconUrl,
       iconSize: [16, 20],
       iconAnchor: [8, 10],
-      popupAnchor: [1, -34],
+      popupAnchor: [1, -15],
       shadowSize: [41, 41],
     });
   }

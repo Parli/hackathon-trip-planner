@@ -8,77 +8,200 @@
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 800px;
+      max-width: 700px;
       margin: 0 auto;
       padding: 20px;
-      line-height: 1.6;
+      line-height: 1.5;
+      color: #333;
+      background-color: #f8f9fa;
     }
 
     h1 {
-      color: #333;
+      color: #2c3e50;
       text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .form-section {
-      background-color: #f9f9f9;
-      border-radius: 8px;
-      padding: 20px;
       margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      font-size: 28px;
     }
 
-    .form-section h2 {
-      margin-top: 0;
-      color: #444;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 10px;
+    h2 {
+      margin-top: 24px;
+      margin-bottom: 12px;
+      color: #2c3e50;
+      font-size: 18px;
+      border-bottom: 1px solid #e1e4e8;
+      padding-bottom: 6px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+
+    .form-set {
+      display: flex;
+      flex: 1 1;
+      gap: 10px;
+      margin-bottom: 12px;
     }
 
     .form-group {
-      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 12px;
+      flex: 1 1;
+    }
+
+    .form-date {
+      flex: 1 1;
+    }
+
+    .form-group-small {
+      flex: 0 1 180px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
     }
 
     label {
       display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
+      margin-bottom: 3px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #555;
     }
 
     input,
     select,
     textarea {
+      box-sizing: border-box;
       width: 100%;
-      padding: 8px;
+      padding: 6px 8px;
       border: 1px solid #ddd;
       border-radius: 4px;
-      font-size: 16px;
+      font-size: 14px;
+      background-color: #f9f9f9;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
     }
 
     .flexibility-select {
-      margin-top: 10px;
+      margin-top: 0;
     }
-    
+
+    .flexibility-select select {
+      background-color: white;
+      font-size: 13px;
+    }
+
+    .flexibility-select label {
+      font-size: 12px;
+      font-weight: normal;
+      color: #666;
+    }
+
     input[type="date"] {
-      width: 100%;
-      padding: 8px;
-      font-size: 16px;
+      font-size: 14px;
     }
 
     button[type="submit"] {
-      background-color: #4CAF50;
+      background-color: #3498db;
       color: white;
       border: none;
-      padding: 12px 20px;
+      padding: 10px 16px;
       border-radius: 4px;
       cursor: pointer;
       font-size: 16px;
+      font-weight: 600;
       width: 100%;
       margin-top: 20px;
+      transition: background-color 0.2s;
     }
 
     button[type="submit"]:hover {
-      background-color: #45a049;
+      background-color: #2980b9;
+    }
+
+    .interests-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 27.5px;
+      margin: 5px 0;
+    }
+
+    .interest-tag {
+      display: inline-flex;
+      align-items: center;
+      background-color: #e1f5fe;
+      border: 1px solid #81d4fa;
+      border-radius: 16px;
+      padding: 3px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      user-select: none;
+    }
+
+    .interest-tag:hover {
+      background-color: #b3e5fc;
+      border-color: #4fc3f7;
+    }
+
+    .interest-input-container {
+      display: flex;
+      margin-bottom: 10px;
+    }
+
+    .interest-input {
+      flex: 1;
+      margin-right: 8px;
+    }
+
+    .add-interest-btn {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .add-interest-btn:hover {
+      background-color: #388e3c;
+    }
+
+    .suggested-interests {
+      margin-top: 8px;
+    }
+
+    .suggested-interest {
+      background-color: #f1f1f1;
+      border: 1px solid #ddd;
+    }
+
+    .suggested-interest:hover {
+      background-color: #e5e5e5;
+      border-color: #ccc;
+    }
+
+    @media (max-width: 500px) {
+
+      .form-group,
+      .form-group-small {
+        flex: 1 1 100%;
+      }
     }
   </style>
 </head>
@@ -87,69 +210,108 @@
   <h1>Itinerary Trip Planner</h1>
 
   <form id="tripForm">
-    <div class="form-section">
-      <h2>Trip Overview</h2>
+    <h2>Trip Overview</h2>
+    <div class="form-group">
+      <label for="tripTitle">Trip Name</label>
+      <input type="text" id="tripTitle" name="tripTitle" required placeholder="Summer Europe Adventure">
+    </div>
+
+    <div class="form-row">
       <div class="form-group">
-        <label for="tripTitle">Trip Name</label>
-        <input type="text" id="tripTitle" name="tripTitle" required placeholder="Summer Europe Adventure">
+        <label for="originName">Traveling from</label>
+        <input type="text" id="originName" name="originName" required placeholder="New York, USA">
+      </div>
+      <div class="form-group">
+        <label for="travelerCount">Number of Travelers</label>
+        <input type="number" id="travelerCount" name="travelerCount" required min="1" max="20" value="2">
       </div>
     </div>
 
-    <div class="form-section">
-      <h2>Timeline</h2>
-      <div class="form-group">
-        <label for="startDate">Start Date</label>
-        <input type="date" id="startDate" name="startDate" required value="2025-06-15">
-        <div class="flexibility-select">
-          <label for="startFlexibility">Flexibility</label>
+    <h2>Timeline</h2>
+    <div class="form-row">
+      <div class="form-set">
+        <div class="form-group form-date">
+          <label for="startDate">Start Date</label>
+          <input type="date" id="startDate" name="startDate" required value="2025-06-15">
+          <!-- Hidden fields for compatibility -->
+          <input type="hidden" id="startYear" name="startYear" value="2025">
+          <input type="hidden" id="startMonth" name="startMonth" value="6">
+          <input type="hidden" id="startDay" name="startDay" value="15">
+        </div>
+        <div class="form-group-small">
+          <label for="startFlexibility">&nbsp;</label>
           <select id="startFlexibility" name="startFlexibility">
             <option value="fixed">Fixed</option>
             <option value="somewhat_flexible" selected>Somewhat Flexible</option>
             <option value="very_flexible">Very Flexible</option>
           </select>
         </div>
-        <!-- Hidden fields for compatibility -->
-        <input type="hidden" id="startYear" name="startYear" value="2025">
-        <input type="hidden" id="startMonth" name="startMonth" value="6">
-        <input type="hidden" id="startDay" name="startDay" value="15">
       </div>
-
-      <div class="form-group">
-        <label for="endDate">End Date</label>
-        <input type="date" id="endDate" name="endDate" required value="2025-06-30">
-        <div class="flexibility-select">
-          <label for="endFlexibility">Flexibility</label>
+      <div class="form-set">
+        <div class="form-group form-date">
+          <label for="endDate">End Date</label>
+          <input type="date" id="endDate" name="endDate" required value="2025-06-30">
+          <!-- Hidden fields for compatibility -->
+          <input type="hidden" id="endYear" name="endYear" value="2025">
+          <input type="hidden" id="endMonth" name="endMonth" value="6">
+          <input type="hidden" id="endDay" name="endDay" value="30">
+        </div>
+        <div class="form-group-small">
+          <label for="endFlexibility">&nbsp;</label>
           <select id="endFlexibility" name="endFlexibility">
             <option value="fixed">Fixed</option>
             <option value="somewhat_flexible" selected>Somewhat Flexible</option>
             <option value="very_flexible">Very Flexible</option>
           </select>
         </div>
-        <!-- Hidden fields for compatibility -->
-        <input type="hidden" id="endYear" name="endYear" value="2025">
-        <input type="hidden" id="endMonth" name="endMonth" value="6">
-        <input type="hidden" id="endDay" name="endDay" value="30">
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="tripDays">Number of Travel Days</label>
+    <div class="form-row">
+      <div class="form-group" style="max-width: 170px;">
+        <label for="tripDays">Travel Days</label>
         <input type="number" id="tripDays" name="tripDays" required min="1" max="180" value="14">
       </div>
     </div>
 
-    <div class="form-section">
-      <h2>Preferences</h2>
+    <h2>Preferences</h2>
 
-      <div class="form-group">
-        <label for="originName">Where are you traveling from?</label>
-        <input type="text" id="originName" name="originName" required placeholder="New York, USA">
+    <div class="form-group">
+      <label for="interests">Interests</label>
+      <div id="interests-container" class="interests-container">
+        <!-- Selected interests will appear here -->
       </div>
-
-      <div class="form-group">
-        <label for="travelerCount">Number of Travelers</label>
-        <input type="number" id="travelerCount" name="travelerCount" required min="1" max="20" value="2">
+      <div class="suggested-interests">
+        <span>Suggestions:</span>
+        <div id="suggested-interests-container" class="interests-container">
+          <span class="interest-tag suggested-interest" data-interest="Museums">Museums</span>
+          <span class="interest-tag suggested-interest" data-interest="Hiking">Hiking</span>
+          <span class="interest-tag suggested-interest" data-interest="Beaches">Beaches</span>
+          <span class="interest-tag suggested-interest" data-interest="Food & Dining">Food & Dining</span>
+          <span class="interest-tag suggested-interest" data-interest="Shopping">Shopping</span>
+          <span class="interest-tag suggested-interest" data-interest="Nightlife">Nightlife</span>
+          <span class="interest-tag suggested-interest" data-interest="History">History</span>
+          <span class="interest-tag suggested-interest" data-interest="Art">Art</span>
+          <span class="interest-tag suggested-interest" data-interest="Nature">Nature</span>
+          <span class="interest-tag suggested-interest" data-interest="Architecture">Architecture</span>
+          <span class="interest-tag suggested-interest" data-interest="Offbeat">Offbeat</span>
+          <span class="interest-tag suggested-interest" data-interest="Sports">Sports</span>
+          <span class="interest-tag suggested-interest" data-interest="Nature">Nature</span>
+          <span class="interest-tag suggested-interest" data-interest="Camping">Camping</span>
+          <span class="interest-tag suggested-interest" data-interest="Country Side">Country Side</span>
+          <span class="interest-tag suggested-interest" data-interest="Theater">Theater</span>
+          <span class="interest-tag suggested-interest" data-interest="Music">Music</span>
+        </div>
       </div>
+      <div class="interest-input-container">
+        <input type="text" id="interest-input" class="interest-input" placeholder="Add an interest...">
+        <button type="button" id="add-interest-btn" class="add-interest-btn">Add</button>
+      </div>
+      <!-- Hidden input to store the JSON array of interests -->
+      <input type="hidden" id="interests" name="interests" value="[]">
+    </div>
 
+    <div class="form-row">
       <div class="form-group">
         <label for="pace">Pace of Activities</label>
         <select id="pace" name="pace" required>
@@ -158,7 +320,6 @@
           <option value="intense">Intense</option>
         </select>
       </div>
-
       <div class="form-group">
         <label for="morningType">Wake-up Preference</label>
         <select id="morningType" name="morningType" required>
@@ -167,23 +328,22 @@
           <option value="late_riser">Late Riser (9-11am)</option>
         </select>
       </div>
-
       <div class="form-group">
         <label for="budgetLevel">Budget Level</label>
         <select id="budgetLevel" name="budgetLevel" required>
-          <option value="shoestring">Shoestring (Very Budget Conscious)</option>
-          <option value="budget">Budget (Cost-conscious)</option>
+          <option value="shoestring">Shoestring</option>
+          <option value="budget">Budget</option>
           <option value="value" selected>Value (Mid-range)</option>
-          <option value="premium">Premium (High-end)</option>
-          <option value="luxury">Luxury (No Budget Limit)</option>
+          <option value="premium">Premium</option>
+          <option value="luxury">Luxury</option>
         </select>
       </div>
+    </div>
 
-      <div class="form-group">
-        <label for="specialNeeds">Special Considerations (Optional)</label>
-        <textarea id="specialNeeds" name="specialNeeds" rows="3"
-          placeholder="Accessibility requirements, dietary restrictions, or other special needs..."></textarea>
-      </div>
+    <div class="form-group">
+      <label for="specialNeeds">Special Considerations (Optional)</label>
+      <textarea id="specialNeeds" name="specialNeeds" rows="2"
+        placeholder="Accessibility requirements, dietary restrictions, or other special needs..."></textarea>
     </div>
 
     <button type="submit">Create Trip</button>
