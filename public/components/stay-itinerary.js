@@ -74,7 +74,10 @@ class StayItinerary extends HTMLElement {
       this._handleDayDateChange
     );
     this.shadowRoot.removeEventListener("show-on-map", this._handleShowOnMap);
-    this.shadowRoot.removeEventListener("modal-closed", this._handleModalClosed);
+    this.shadowRoot.removeEventListener(
+      "modal-closed",
+      this._handleModalClosed
+    );
   }
 
   get stay() {
@@ -642,8 +645,12 @@ class StayItinerary extends HTMLElement {
             placesSearch.classList.add("loading");
             placesSearch.disabled = true;
 
+            const trip = TripState.get(TripState.getIdFromUrl());
+
             // Get new places (any kind)
-            const newPlaces = await getPlaceResearch(query, destination);
+            const newPlaces = await getPlaceResearch(query, destination, {
+              preferences: trip.preferences,
+            });
 
             // Update the underlying data structure
             if (newPlaces.length > 0 && this._stay) {
@@ -702,7 +709,7 @@ class StayItinerary extends HTMLElement {
 
       // Set the stay data for the map
       stayMap.stay = this._stay;
-      
+
       // Clear any previously set place-id
       stayMap.placeId = null;
 
@@ -718,7 +725,7 @@ class StayItinerary extends HTMLElement {
       }, 200);
     }
   }
-  
+
   /**
    * Handle show-on-map event to show a specific place on the map
    * @param {CustomEvent} event The show-on-map event with place data
@@ -727,7 +734,7 @@ class StayItinerary extends HTMLElement {
   _handleShowOnMap(event) {
     const place = event.detail.place;
     if (!place || !place.id) return;
-    
+
     const mapModal = this.shadowRoot.getElementById("map-modal");
     const stayMap = this.shadowRoot.getElementById("stay-map");
 
@@ -743,24 +750,24 @@ class StayItinerary extends HTMLElement {
 
       // Set the stay data for the map
       stayMap.stay = this._stay;
-      
+
       // Open the modal first
       mapModal.open();
-      
+
       // Use a slightly longer timeout to ensure the map is fully initialized
       // before setting the place ID to highlight and open the popup
       setTimeout(() => {
         if (stayMap._map) {
           // Ensure map is properly sized
           stayMap._map.invalidateSize(true);
-          
+
           // Set the place ID to highlight AFTER the map has been sized properly
           stayMap.placeId = place.id;
         }
       }, 250);
     }
   }
-  
+
   /**
    * Handle modal closed event to clean up
    * @param {CustomEvent} event The modal-closed event
@@ -769,7 +776,7 @@ class StayItinerary extends HTMLElement {
   _handleModalClosed(event) {
     // Find the map modal
     const mapModal = this.shadowRoot.getElementById("map-modal");
-    
+
     // Check if the closed modal is the map modal
     if (event.target === mapModal) {
       const stayMap = this.shadowRoot.getElementById("stay-map");

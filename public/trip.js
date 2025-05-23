@@ -298,8 +298,12 @@ async function handleDestinationSearch(event) {
   searchQuery.disabled = true;
 
   try {
+    const trip = TripState.get(TripState.getIdFromUrl());
+
     // Call getStayResearch with the search query
-    const stays = await getStayResearch(searchQuery.value);
+    const stays = await getStayResearch(searchQuery.value, {
+      preferences: trip.preferences,
+    });
 
     // Clear the loading message
     searchResults.innerHTML = "";

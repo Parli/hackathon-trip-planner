@@ -886,10 +886,11 @@ async function getResearch(message, { queryCount = 4, resultCount = 5 } = {}) {
  * @param {string} message User message
  * @param {Object} options
  * @param {number} options.count Count of places to retrieve
+ * @param {Preferences} [preferences] Traveler Preferences
  * @returns {Promise<Array.<Stay>>} Stays relevent to the user message
  *  that contains relavant information to fulfill the user message
  */
-async function getStayResearch(message, { count = 3 } = {}) {
+async function getStayResearch(message, { count = 3, preferences } = {}) {
   try {
     // Get research for finding stays for the user request
     const research = await getResearch(
@@ -907,6 +908,9 @@ There should be no duplicates in the output.
 Each destination must be a specific city or town that can be visited.
 
 The description should be short and tailored to the user request highlighting relavant aspects.
+
+Traveler Preferences:
+${JSON.stringify(preferences, null, 2)}
 
 Research:
 
@@ -1335,10 +1339,15 @@ async function getPlaceInfo(placeName, address = "") {
  * @param {Destination} destination Location to find places
  * @param {Object} options
  * @param {number} options.count Count of places to retrieve
+ * @param {Preferences} [preferences] Traveler Preferences
  * @returns {Promise<Array.<Place>>} Places relevent to the user message and destination
  *  that contains relavant information to fulfill the user message
  */
-async function getPlaceResearch(message, destination, { count = 3 } = {}) {
+async function getPlaceResearch(
+  message,
+  destination,
+  { preferences, count = 3 } = {}
+) {
   try {
     // Get research for finding places for the user request
     const research = await getResearch(
@@ -1362,6 +1371,9 @@ Description should be short and tailored to the context.
 There should be no duplicates in the output.
 Places must be specific locations, like a landmark, restaurant, hotel, museum, store, park, etc.
 Do not use cities, countries, or regions as places
+
+Traveler Preferences:
+${JSON.stringify(preferences, null, 2)}
 
 Research:
 
@@ -1436,7 +1448,7 @@ ${JSON.stringify(research, null, 2)}
  * @param {number} options.startTime Timestamp in seconds of the plan start time
  * @param {number} options.endTime Timestamp in seconds of the plan end time
  * @param {number} [options.count=10] Number of places to find
- * @param {Array.<Preferences>} [preferences] Array of interests
+ * @param {Preferences} [preferences] Traveler Preferences
  * @returns {Promise<Array.<Plan>>} Array of plans for the day
  */
 async function getDayPlanResearch(
