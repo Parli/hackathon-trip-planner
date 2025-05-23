@@ -367,6 +367,25 @@ class DayPlan extends HTMLElement {
           color: white;
         }
 
+        .magic-button {
+          background-color: rgb(230, 230, 230);
+          color: black;
+          border: none;
+          border-radius: 50%;
+          width: 24px;
+          height: 24px;
+          padding: 0;
+          margin: 3px 3px 3px auto;
+          cursor: pointer;
+          font-size: 1rem;
+          transition: background-color 0.2s;
+        }
+
+        .magic-button:hover {
+          background-color: #8e44ad;
+          color: white;
+        }
+
         .date {
           font-size: 1.2rem;
           font-weight: bold;
@@ -453,6 +472,7 @@ class DayPlan extends HTMLElement {
             ? `<div class="temp">${this._getTemperatureRange()}</div>`
             : ""
         }
+        <button class="magic-button" data-action="magic-wand" title="Magic wand - Find more things to do">🪄</button>
       </div>
 
       <div class="activities">
@@ -526,6 +546,26 @@ class DayPlan extends HTMLElement {
             activities: this._getActivities(),
             direction: action === "day-earlier" ? "earlier" : "later",
             isEmpty: this._isEmpty(),
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    } else if (action === "magic-wand") {
+      // Show loading state for magic wand button
+      const magicButton = this.shadowRoot.querySelector(".magic-button");
+      magicButton.innerHTML = "⏳";
+      // Will re-enable when trip is re-rendered
+      magicButton.disabled = true;
+
+      // Dispatch magic-wand event to enhance the day's plans
+      this.dispatchEvent(
+        new CustomEvent("day-enhance", {
+          detail: {
+            date: this._date,
+            startTime: this._getStartTime(),
+            endTime: this._getEndTime(),
+            stayId: this._stay.id,
           },
           bubbles: true,
           composed: true,

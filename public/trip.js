@@ -1,5 +1,9 @@
 // Trip planner - Trip page
-import { getStayResearch, getHistoricWeatherForStay } from "/research.js";
+import {
+  getStayResearch,
+  getHistoricWeatherForStay,
+  getDayPlanResearch,
+} from "/research.js";
 import "./components/card-carousel.js";
 import * as TripState from "/state.js";
 
@@ -64,6 +68,46 @@ document.addEventListener("stay-deleted", (event) => {
   console.log("Stay deleted event received:", event.detail.stayId);
   // The state is already updated in the component, just update the UI
   preserveHeightDuringRender(() => renderTrip(TripState.getTrip()));
+});
+
+// Add event listener for day-enhance events (magic wand)
+document.addEventListener("day-enhance", async (event) => {
+  console.log("Day enhance event received:", event.detail);
+  try {
+    const { stayId, startTime, endTime } = event.detail;
+    const stay = TripState.get(stayId);
+    if (!stay) {
+      return;
+    }
+
+    // Call getDayPlanResearch to get enhanced plans for the day
+    const enhancedPlans = await getDayPlanResearch(stay, {
+      startTime,
+      endTime,
+      count: 10,
+    });
+
+    if (enhancedPlans && enhancedPlans.length > 0) {
+      // Create a set of plan IDs from the enhanced plans
+      const enhancedPlanIds = new Set(enhancedPlans.map((plan) => plan.id));
+
+      // Filter out plans from the existing plans that have IDs matching enhanced plans
+      const filteredExistingPlans = stay.day_plans.filter(
+        (plan) => !enhancedPlanIds.has(plan.id)
+      );
+
+      // Combine filtered existing plans with new enhanced plans
+      stay.day_plans = [...filteredExistingPlans, ...enhancedPlans];
+
+      // Update the stay in the trip state
+      TripState.update(stay.id, stay);
+
+      // Save the trip data
+      await TripState.saveTrip();
+    }
+  } catch (error) {
+    console.error("Error enhancing day plan:", error);
+  }
 });
 
 TripState.addEventListener("trip-error", (error) => {

@@ -1028,7 +1028,7 @@ class StayItinerary extends HTMLElement {
     const endTime = startTime + 3600; // Add 1 hour (3600 seconds)
 
     // Create a unique ID for the plan
-    const planId = `plan-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const planId = crypto.randomUUID();
 
     // Create the plan object
     const plan = {

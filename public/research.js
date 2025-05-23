@@ -1425,7 +1425,7 @@ ${JSON.stringify(research, null, 2)}
 }
 
 /**
- * Gets additional recommendations for a specific day in a stay, based on existing plans
+ * Gets day plan recommendations for a specific day in a stay, based on existing plans
  * @param {Stay} stay The stay object containing day plans and other places
  * @param {Object} options Options for the day plan research
  * @param {number} options.startTime Timestamp in seconds of the plan start time
@@ -1504,7 +1504,7 @@ Context: User is looking to plan a day in this neighborhood. Make sure search qu
     );
 
     // Clean up the research to find a list of locations that the user may be interested in
-    const systemPrompt = `
+    const placesPrompt = `
 Using the research provided, extract the best places to visit based on the user's stay.
 
 Evaluate each place for whether they are things the user may be interested based on the places they are already interested in.
@@ -1530,8 +1530,7 @@ ${JSON.stringify(research, null, 2)}
     const { object: neighborhoodResults } = await generateObject({
       model: registry.languageModel(defaultObjectModel),
       output: "array",
-      system: systemPrompt,
-      prompt: message,
+      prompt: placesPrompt,
       schema: jsonSchema({
         title: "Place",
         type: "object",
@@ -1610,7 +1609,7 @@ ${JSON.stringify(research, null, 2)}
       .join("\n");
 
     // Clean up the research to find a list of locations that the user may be interested in
-    const filterSystemPrompt = `
+    const filterPrompt = `
 Given the following places, come up with a plan for visiting them based on start and end times for each place.
 
 The plan should visit places efficiently based on the nearness of their coordinates.
@@ -1635,8 +1634,7 @@ ${neighborhoodPlacesContext}
     const { object: planPlaces } = await generateObject({
       model: registry.languageModel(defaultObjectModel),
       output: "array",
-      system: filterSystemPrompt,
-      prompt: message,
+      prompt: filterPrompt,
       schema: jsonSchema({
         title: "PlannedDestination",
         type: "object",
@@ -1667,6 +1665,14 @@ ${neighborhoodPlacesContext}
 
     showUpdate(`📅 Day plan created`);
 
+    console.log(
+      `Made ${planPlaces.length} plans:`,
+      planPlaces.map(({ name }) => `${name}`)
+    );
+    console.debug("Plan places results:", JSON.stringify(planPlaces));
+
+    debugger;
+
     // Collect a list of all old and new places
     const allPlaces = [...allOldPlaces, ...neighborhoodPlaces];
 
@@ -1694,36 +1700,20 @@ ${neighborhoodPlacesContext}
         const endTimestamp =
           dayStartTimestamp + Math.floor(planPlace.end_hour * 3600);
 
-        // Check if this is an existing plan
+        // Check if an existing plan has this place
         const existingPlan = existingPlans.find(
-          (p) => p.location?.id === planPlace.id
+          (plan) => plan.location?.id === planPlace.id
         );
 
         return {
+          kind: "plan",
           id: existingPlan?.id || crypto.randomUUID(),
           start_time: startTimestamp,
           end_time: endTimestamp,
           location: placeDetails,
-          transportation: null,
-          notes: null,
         };
       })
       .filter(Boolean);
-
-    // Check if any existing plans were left out and add them
-    for (const existingPlan of existingPlans) {
-      const isIncluded = plans.some(
-        (p) =>
-          p.id === existingPlan.id ||
-          p.location?.id === existingPlan.location?.id
-      );
-      if (!isIncluded && existingPlan.location) {
-        plans.push(existingPlan);
-      }
-    }
-
-    // Sort plans by start time
-    plans.sort((a, b) => a.start_time - b.start_time);
 
     return plans;
   } catch (error) {
