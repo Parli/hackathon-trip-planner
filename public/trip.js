@@ -287,7 +287,6 @@ async function handleDestinationSearch(event) {
 
   // Show loading state
   searchResults.innerHTML = "";
-  cityCarousel.style.display = "none";
 
   // Add loading indicator
   const loadingIndicator = document.createElement("div");
@@ -313,7 +312,7 @@ async function handleDestinationSearch(event) {
     );
 
     // Filter out destinations that are already in the trip
-    const filteredStays = stays.filter((stay) => {
+    const filteredStays = [...stays, ...currentSearchResults].filter((stay) => {
       const stayKey = `${stay.destination.city.toLowerCase()},${stay.destination.country.toLowerCase()}`;
       return !existingDestinations.includes(stayKey);
     });
@@ -358,7 +357,6 @@ async function handleDestinationSearch(event) {
   } catch (error) {
     console.error("Error searching for destinations:", error);
     searchResults.innerHTML = `<p class="error">Error: ${error.message}</p>`;
-    cityCarousel.style.display = "none";
   } finally {
     // Remove loading indicator
     const loadingIndicator = document.querySelector(
