@@ -191,7 +191,7 @@ class PlanItem extends HTMLElement {
           visibility: visible;
         }
 
-        .delete-button {
+        .delete-button, .map-button {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -210,6 +210,18 @@ class PlanItem extends HTMLElement {
 
         .delete-button:hover {
           background-color: #d32f2f;
+          color: white;
+        }
+
+        .map-button {
+          position: absolute;
+          right: 0;
+          top: 5px;
+          font-size: 0.8rem;
+        }
+
+        .map-button:hover {
+          background-color: #2196F3;
           color: white;
         }
 
@@ -326,6 +338,7 @@ class PlanItem extends HTMLElement {
       <div class="container">
         <div class="action-buttons">
           <button class="delete-button" data-action="delete-plan" title="Remove">×</button>
+          <button class="map-button" data-action="show-on-map" title="Show on map">🗺️</button>
           <div class="move-buttons">
             <button class="move-button move-up-button" data-action="move-up" title="Earlier (-1hr)">
               <div class="move-button-icon">▲</div>
@@ -421,6 +434,17 @@ class PlanItem extends HTMLElement {
           detail: {
             plan: this._plan,
             direction: "down",
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
+    } else if (action === "show-on-map") {
+      // Dispatch an event to show this place on the map
+      this.dispatchEvent(
+        new CustomEvent("show-on-map", {
+          detail: {
+            place: this._plan.location,
           },
           bubbles: true,
           composed: true,

@@ -111,6 +111,17 @@ class PlaceCard extends HTMLElement {
           composed: true,
         })
       );
+    } else if (target.classList.contains("map-button")) {
+      // Dispatch an event to show this place on the map
+      this.dispatchEvent(
+        new CustomEvent("show-on-map", {
+          detail: {
+            place: this._place,
+          },
+          bubbles: true,
+          composed: true,
+        })
+      );
     }
   }
 
@@ -197,7 +208,7 @@ class PlaceCard extends HTMLElement {
           visibility: visible;
         }
 
-        .add-button, .delete-button {
+        .add-button, .map-button, .delete-button {
           width: 32px;
           height: 32px;
           border-radius: 50%;
@@ -219,6 +230,17 @@ class PlaceCard extends HTMLElement {
 
         .add-button:hover {
           background-color: #45a049;
+          transform: scale(1.1);
+        }
+
+        .map-button {
+          background-color: #2196F3;
+          color: white;
+          font-size: 16px;
+        }
+
+        .map-button:hover {
+          background-color: #0b7dda;
           transform: scale(1.1);
         }
 
@@ -336,6 +358,7 @@ class PlaceCard extends HTMLElement {
       <div class="container">
         <div class="image-wrapper">
           <div class="action-buttons">
+          <button class="map-button" title="Show on map">🗺️</button>
             <button class="add-button" title="Add to plan">+</button>
             <button class="delete-button" title="Delete">×</button>
           </div>

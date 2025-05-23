@@ -31,6 +31,8 @@ class StayItinerary extends HTMLElement {
     this._handleDayDateChange = this._handleDayDateChange.bind(this);
     this._updateStayBoundaries = this._updateStayBoundaries.bind(this);
     this._handleMapButtonClick = this._handleMapButtonClick.bind(this);
+    this._handleShowOnMap = this._handleShowOnMap.bind(this);
+    this._handleModalClosed = this._handleModalClosed.bind(this);
     this.render();
   }
 
@@ -49,6 +51,8 @@ class StayItinerary extends HTMLElement {
       "day-date-change",
       this._handleDayDateChange
     );
+    this.shadowRoot.addEventListener("show-on-map", this._handleShowOnMap);
+    this.shadowRoot.addEventListener("modal-closed", this._handleModalClosed);
   }
 
   disconnectedCallback() {
@@ -69,6 +73,8 @@ class StayItinerary extends HTMLElement {
       "day-date-change",
       this._handleDayDateChange
     );
+    this.shadowRoot.removeEventListener("show-on-map", this._handleShowOnMap);
+    this.shadowRoot.removeEventListener("modal-closed", this._handleModalClosed);
   }
 
   get stay() {
@@ -696,6 +702,9 @@ class StayItinerary extends HTMLElement {
 
       // Set the stay data for the map
       stayMap.stay = this._stay;
+      
+      // Clear any previously set place-id
+      stayMap.placeId = null;
 
       // Open the modal
       mapModal.open();
@@ -704,9 +713,70 @@ class StayItinerary extends HTMLElement {
       // to ensure proper rendering since the container is now visible
       setTimeout(() => {
         if (stayMap._map) {
-          stayMap._map.invalidateSize();
+          stayMap._map.invalidateSize(true);
         }
-      }, 100);
+      }, 200);
+    }
+  }
+  
+  /**
+   * Handle show-on-map event to show a specific place on the map
+   * @param {CustomEvent} event The show-on-map event with place data
+   * @private
+   */
+  _handleShowOnMap(event) {
+    const place = event.detail.place;
+    if (!place || !place.id) return;
+    
+    const mapModal = this.shadowRoot.getElementById("map-modal");
+    const stayMap = this.shadowRoot.getElementById("stay-map");
+
+    if (mapModal && stayMap) {
+      // Set the title of the modal
+      mapModal.setTitle(
+        `${place.name} - ${this._stay.destination.city}${
+          this._stay.destination.state
+            ? `, ${this._stay.destination.state}`
+            : ""
+        }, ${this._stay.destination.country}`
+      );
+
+      // Set the stay data for the map
+      stayMap.stay = this._stay;
+      
+      // Open the modal first
+      mapModal.open();
+      
+      // Use a slightly longer timeout to ensure the map is fully initialized
+      // before setting the place ID to highlight and open the popup
+      setTimeout(() => {
+        if (stayMap._map) {
+          // Ensure map is properly sized
+          stayMap._map.invalidateSize(true);
+          
+          // Set the place ID to highlight AFTER the map has been sized properly
+          stayMap.placeId = place.id;
+        }
+      }, 250);
+    }
+  }
+  
+  /**
+   * Handle modal closed event to clean up
+   * @param {CustomEvent} event The modal-closed event
+   * @private
+   */
+  _handleModalClosed(event) {
+    // Find the map modal
+    const mapModal = this.shadowRoot.getElementById("map-modal");
+    
+    // Check if the closed modal is the map modal
+    if (event.target === mapModal) {
+      const stayMap = this.shadowRoot.getElementById("stay-map");
+      if (stayMap) {
+        // Clear any place ID to prevent popup from showing on next open
+        stayMap.placeId = null;
+      }
     }
   }
 

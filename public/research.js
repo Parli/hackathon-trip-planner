@@ -461,11 +461,16 @@ const preferencesSchema = {
       enum: ["shoestring", "budget", "value", "premium", "luxury"],
       description: "How much the traveler wants to spend",
     },
-    special_needs: {
+    interests: {
       type: "array",
       items: {
         type: "string",
       },
+      description:
+        "A list of the kinds of things the traveler is interested in",
+    },
+    special_needs: {
+      type: "string",
       description: "Open-ended extra considerations",
     },
   },
