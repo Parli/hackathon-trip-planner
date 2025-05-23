@@ -1684,8 +1684,6 @@ ${neighborhoodPlacesContext}
     );
     console.debug("Plan places results:", JSON.stringify(planPlaces));
 
-    debugger;
-
     // Collect a list of all old and new places
     const allPlaces = [...allOldPlaces, ...neighborhoodPlaces];
 
