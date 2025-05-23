@@ -1036,8 +1036,8 @@ async function getPlaceInfo(placeName, address = "") {
     if (imagesSearch.images && imagesSearch.images.length > 0) {
       // Add up to 5 images from dedicated image search results
       imagesSearch.images.slice(0, 5).forEach((img) => {
-        if (img.imageUrl && !placeData.photos.includes(img.imageUrl)) {
-          placeData.photos.push(img.imageUrl);
+        if (img.thumbnailUrl && !placeData.photos.includes(img.thumbnailUrl)) {
+          placeData.photos.push(img.thumbnailUrl);
         }
       });
     }
