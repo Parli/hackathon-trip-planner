@@ -20,6 +20,12 @@ class StayMap extends HTMLElement {
     if (this._stay) {
       this._initMap();
     }
+
+    // Add event listener for popup clicks to handle the "Add Place" button
+    this.shadowRoot.addEventListener(
+      "click",
+      this._handlePopupClick.bind(this)
+    );
   }
 
   disconnectedCallback() {
@@ -27,6 +33,45 @@ class StayMap extends HTMLElement {
     if (this._map) {
       this._map.remove();
       this._map = null;
+    }
+
+    // Remove event listener
+    this.shadowRoot.removeEventListener(
+      "click",
+      this._handlePopupClick.bind(this)
+    );
+  }
+
+  /**
+   * Handle clicks on popup content, particularly the "Add Place" button
+   * @param {Event} event Click event
+   * @private
+   */
+  _handlePopupClick(event) {
+    // Check if the click is on an "Add Place" button
+    if (event.target.classList.contains("add-place-button")) {
+      const placeId = event.target.dataset.placeId;
+      if (placeId) {
+        // Find the place in the stay options
+        const place = this._stay.options.find(
+          (option) => option.id === placeId
+        );
+        if (place) {
+          // Dispatch a custom event with the place data
+          this.dispatchEvent(
+            new CustomEvent("place-add-to-plan", {
+              detail: {
+                place,
+              },
+              bubbles: true,
+              composed: true,
+            })
+          );
+
+          // Close the popup (access via Leaflet's internal methods)
+          this._map.closePopup();
+        }
+      }
     }
   }
 
@@ -344,6 +389,14 @@ class StayMap extends HTMLElement {
       const dayColorClass = `day${location.dayNum}-color`;
 
       const photo = place.photos?.[0];
+
+      // Create action button based on location type
+      let actionButton = "";
+      if (location.type === "option") {
+        // For unscheduled options, add an "Add Place" button
+        actionButton = `<button class="add-place-button popup-day option-color" data-place-id="${place.id}">Add Place</button>`;
+      }
+
       popupContent = `
         <div class="popup-content">
           ${
@@ -364,6 +417,7 @@ class StayMap extends HTMLElement {
                     }</span>`
                   : ""
               }
+              ${actionButton}
             </h3>
             ${
               place.description
@@ -571,6 +625,16 @@ class StayMap extends HTMLElement {
           color: #666;
           font-size: 13px;
           margin-bottom: 8px;
+        }
+
+        .add-place-button {
+          border: none;
+          cursor: pointer;
+          transition: background-color 0.3s;
+        }
+
+        .add-place-button:hover {
+          background-color: #45a049;
         }
 
         .popup-time {
