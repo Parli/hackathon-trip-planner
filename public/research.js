@@ -1,4 +1,8 @@
-import { getSearch, getHistoricWeather } from "/search.js";
+import {
+  getSearch,
+  getHistoricWeather,
+  getCoordinatesLocation,
+} from "/search.js";
 import { showUpdate } from "/updater.js";
 
 // `ai` Vercel AI SDK https://ai-sdk.dev/docs/
@@ -1326,7 +1330,7 @@ async function getPlaceInfo(placeName, address = "") {
  * @param {Destination} destination Location to find places
  * @param {Object} options
  * @param {number} options.count Count of places to retrieve
- * @returns {Promise<Array.<Place>>} Stays relevent to the user message
+ * @returns {Promise<Array.<Place>>} Places relevent to the user message and destination
  *  that contains relavant information to fulfill the user message
  */
 async function getPlaceResearch(message, destination, { count = 3 } = {}) {
@@ -1352,7 +1356,7 @@ The address should be the most complete you can generate.
 Description should be short and tailored to the context.
 There should be no duplicates in the output.
 Places must be specific locations, like a landmark, restaurant, hotel, museum, store, park, etc.
-Do not cities, countries, or regions as places
+Do not use cities, countries, or regions as places
 
 Research:
 
@@ -1364,9 +1368,9 @@ ${JSON.stringify(research, null, 2)}
       system: systemPrompt,
       prompt: message,
       schema: jsonSchema({
-        title: "Destination",
+        title: "Place",
         type: "object",
-        description: "Destination address and description",
+        description: "Place address and description",
         properties: {
           name: {
             type: "string",
@@ -1379,7 +1383,7 @@ ${JSON.stringify(research, null, 2)}
           },
           description: {
             type: "string",
-            description: "Description of the destination",
+            description: "Description of the place",
           },
         },
         required: ["address", "description"],
@@ -1416,6 +1420,221 @@ ${JSON.stringify(research, null, 2)}
     return results;
   } catch (error) {
     showUpdate(`❌ Place research failed`);
+    throw error;
+  }
+}
+
+/**
+ * Given a stay and a start and end time, provide new and updated plans for that stay within that timeframe
+ * @param {Stay} stay Stay data structure. READ ONLY
+ * @param {Object} options
+ * @param {number} options.startTime Timestamp in seconds of the plan start time
+ * @param {number} options.endTime Timestamp in seconds of the  plan end time
+ * @param {number} [options.count] Number of places to find
+ * @returns {Promise<Array.<Plan>>} Plans
+ */
+async function getDayPlanResearch(stay, { startTime, endTime, count = 10 }) {
+  try {
+    // First process the stay day plans to extract all existing plans that fall within the start and end time
+    const existingPlans = []; // Dummy value
+    // Extract places from the existing plans
+    const existingPlaces = existingPlans.map((plan) => plan.location);
+    // Then, from those existing places, find the average coordinate of where those places are
+    const planCentralCoordinates = { latitude: NaN, longitude: NaN }; // Dummy value
+    // Look up the location of the coordinates to get the neighborhood, city, and country
+    const planNeighborhood = getCoordinatesLocation(planCentralCoordinates);
+    // Using the found neighborhook, create a neighborhood query string
+    const neighborhoodString = [
+      planNeighborhood.district,
+      planNeighborhood.district,
+      planNeighborhood.state,
+      planNeighborhood.country,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    // Get a list of all existing places
+    const allOldPlaces = [
+      ...(stay.options ?? []),
+      ...(stay.day_plans?.map((plan) => plan.location) ?? []),
+    ];
+    const allOldPlacesContext = allOldPlaces
+      .map((place) => `${place.name}: [${place.category}] ${place.description}`)
+      .join("\n\n");
+    // Get research for finding places for the user request
+    const research = await getResearch(
+      `Find places to eat and things to do in the neighborhood of "${neighborhoodString}"
+
+Context: User is looking to plan a day in this neighborhood. Make sure search queries include the full neighborhood string`,
+      { queryCount: 4, resultCount: 3 }
+    );
+    // Clean up the research to find a list of locations that the user may be interested in
+    const systemPrompt = `
+Using the research provided, extract the best places to visit based on the user's stay.
+
+Evaluate each place for whether they are things the user may be interested based on the places they are already interested in.
+
+Your output should provide a sorted array of place objects with an address and description.
+It should be sorted based on relevancy to the user request.
+The address should be the most complete you can generate.
+Description should be short and tailored to the context.
+There should be no duplicates in the output.
+Places must be specific locations, like a landmark, restaurant, hotel, museum, store, park, etc.
+Do not use neighborhoods, cities, countries, or regions as places
+The output should NOT include any of the existing places provided.
+
+Places already being visited:
+
+${allOldPlacesContext}
+
+Research:
+
+${JSON.stringify(research, null, 2)}
+  `;
+    const { object: neighborhoodResults } = await generateObject({
+      model: registry.languageModel(defaultObjectModel),
+      output: "array",
+      system: systemPrompt,
+      prompt: message,
+      schema: jsonSchema({
+        title: "Place",
+        type: "object",
+        description: "Place address and description",
+        properties: {
+          name: {
+            type: "string",
+            description: "Name of the place",
+          },
+          address: {
+            type: "string",
+            description:
+              "Best available full address of the place including number, street, city, country and zip code if available",
+          },
+          description: {
+            type: "string",
+            description: "Description of the place",
+          },
+        },
+        required: ["address", "description"],
+      }),
+    });
+    showUpdate(`🏛️ Places found`);
+
+    console.log(
+      `Found ${neighborhoodResults.length} destinations:`,
+      neighborhoodPlaces.map(({ name }) => `${name}`)
+    );
+    console.debug(
+      "neighborhood places results:",
+      JSON.stringify(neighborhoodResults)
+    );
+
+    const neighborhoodPlaces = (
+      await Promise.all(
+        neighborhoodResults.slice(0, count).map(async (place) => {
+          try {
+            const result = {
+              id: crypto.randomUUID(),
+              ...place,
+              ...(await getPlaceInfo(place.name, place.address)),
+              destination,
+              description: place.description,
+            };
+            return result;
+          } catch (error) {
+            console.error("Error in getPlaceResearch:", error);
+            return null;
+          }
+        })
+      )
+    ).filter(Boolean);
+
+    // Create contexts for the existing places and new neighborhoods places
+    const existingPlaceContext = existingPlaces.map(
+      ({ id, kind, category, description, coordinates }) => ({
+        id,
+        kind,
+        category,
+        description,
+        coordinates,
+      })
+    );
+    const neighborhoodPlacesContext = neighborhoodPlaces.map(
+      ({ id, kind, category, description, coordinates }) => ({
+        id,
+        kind,
+        category,
+        description,
+        coordinates,
+      })
+    );
+
+    // Clean up the research to find a list of locations that the user may be interested in
+    const filterSystemPrompt = `
+Given the following places, come up with a plan for visiting them based on start and end times for each place.
+
+The plan should visit places efficiently based on the nearness of their coordinates.
+The plan should allow for time to get between places.
+The plan should not be too overloaded.
+The most interesting potential places should be prioritized.
+The plan should take place during reasonable hours.
+Restaurants should be planned at an appropriate time of day to eat.
+Take into account how hungry the user may be at different times based on activity level.
+Restaurants should only be included if they are conveniently located, otherwise the user can look up additional restaurants later.
+The places under the must visit section MUST be included in the output plan.
+
+Must Visit Places:
+
+${existingPlaceContext}
+
+Potential Places to Visit:
+
+${neighborhoodPlacesContext}
+  `;
+    const { object: planPlaces } = await generateObject({
+      model: registry.languageModel(defaultObjectModel),
+      output: "array",
+      system: filterSystemPrompt,
+      prompt: message,
+      schema: jsonSchema({
+        title: "Destination",
+        type: "object",
+        description: "Destination address and description",
+        properties: {
+          name: {
+            type: "string",
+            description: "Name of the place",
+          },
+          id: {
+            type: "string",
+            description: "Exact id of the input place",
+          },
+          start_hour: {
+            type: "number",
+            description:
+              "Hour of day to start visit from 0-24. May be fractional.",
+          },
+          end_hour: {
+            type: "number",
+            description: "Hour of day end visit from 0-24. May be fractional.",
+          },
+        },
+        required: ["address", "description"],
+      }),
+    });
+    showUpdate(`🏛️ Places found`);
+
+    // Collect a list of all old and new places
+    const allPlaces = [...allOldPlaces, neighborhoodPlaces];
+    // Convert planPlaces into standard plans based on the plan schema
+    // start_hour and end_hour should be converted into timestamps for the day given from startTime
+    // If a plan exists in existingPlans, use the old plan id, otherwise create a new UUID
+    // The time of the newly generated plan should be used, not the old plan
+    // If an existing plan was mistakenly left out, append it to the list
+    // The plan location should come from allPlaces as it has the full data
+    const plans = planPlaces.map(); // Dummy value
+    return plans;
+  } catch (error) {
+    showUpdate(`❌ Day plan research failed`);
     throw error;
   }
 }
@@ -1630,5 +1849,6 @@ export {
   getStayResearch,
   getPlaceInfo,
   getPlaceResearch,
+  getDayPlanResearch,
   getHistoricWeatherForStay,
 };
