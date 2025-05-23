@@ -1425,41 +1425,76 @@ ${JSON.stringify(research, null, 2)}
 }
 
 /**
- * Given a stay and a start and end time, provide new and updated plans for that stay within that timeframe
- * @param {Stay} stay Stay data structure. READ ONLY
- * @param {Object} options
+ * Gets additional recommendations for a specific day in a stay, based on existing plans
+ * @param {Stay} stay The stay object containing day plans and other places
+ * @param {Object} options Options for the day plan research
  * @param {number} options.startTime Timestamp in seconds of the plan start time
- * @param {number} options.endTime Timestamp in seconds of the  plan end time
- * @param {number} [options.count] Number of places to find
- * @returns {Promise<Array.<Plan>>} Plans
+ * @param {number} options.endTime Timestamp in seconds of the plan end time
+ * @param {number} [options.count=10] Number of places to find
+ * @returns {Promise<Array.<Plan>>} Array of plans for the day
  */
 async function getDayPlanResearch(stay, { startTime, endTime, count = 10 }) {
   try {
-    // First process the stay day plans to extract all existing plans that fall within the start and end time
-    const existingPlans = []; // Dummy value
+    // First process the stay day plans to extract all existing plans that start within the start and end time
+    const existingPlans = (stay.day_plans || []).filter(
+      (plan) => plan.start_time >= startTime && plan.start_time <= endTime
+    );
+
     // Extract places from the existing plans
-    const existingPlaces = existingPlans.map((plan) => plan.location);
+    const existingPlaces = existingPlans
+      .map((plan) => plan.location)
+      .filter(Boolean);
+
+    if (existingPlaces.length === 0) {
+      // If no existing places, return empty array
+      return [];
+    }
+
     // Then, from those existing places, find the average coordinate of where those places are
-    const planCentralCoordinates = { latitude: NaN, longitude: NaN }; // Dummy value
+    const planCentralCoordinates = {
+      latitude:
+        existingPlaces.reduce(
+          (sum, place) => sum + (place.coordinates?.latitude || 0),
+          0
+        ) / existingPlaces.length,
+      longitude:
+        existingPlaces.reduce(
+          (sum, place) => sum + (place.coordinates?.longitude || 0),
+          0
+        ) / existingPlaces.length,
+    };
+
     // Look up the location of the coordinates to get the neighborhood, city, and country
-    const planNeighborhood = getCoordinatesLocation(planCentralCoordinates);
-    // Using the found neighborhook, create a neighborhood query string
+    const planNeighborhood = await getCoordinatesLocation(
+      planCentralCoordinates
+    );
+
+    // Using the found neighborhood, create a neighborhood query string
     const neighborhoodString = [
-      planNeighborhood.district,
-      planNeighborhood.district,
+      planNeighborhood.neighborhood,
+      planNeighborhood.city,
       planNeighborhood.state,
       planNeighborhood.country,
     ]
       .filter(Boolean)
       .join(", ");
+
     // Get a list of all existing places
     const allOldPlaces = [
       ...(stay.options ?? []),
-      ...(stay.day_plans?.map((plan) => plan.location) ?? []),
+      ...(stay.day_plans ?? []).map((plan) => plan.location).filter(Boolean),
     ];
+
     const allOldPlacesContext = allOldPlaces
-      .map((place) => `${place.name}: [${place.category}] ${place.description}`)
+      .filter((place) => place && place.name)
+      .map(
+        (place) =>
+          `${place.name}: [${place.category ?? "No Category"}] ${
+            place.description ?? "No Description"
+          }`
+      )
       .join("\n\n");
+
     // Get research for finding places for the user request
     const research = await getResearch(
       `Find places to eat and things to do in the neighborhood of "${neighborhoodString}"
@@ -1467,6 +1502,7 @@ async function getDayPlanResearch(stay, { startTime, endTime, count = 10 }) {
 Context: User is looking to plan a day in this neighborhood. Make sure search queries include the full neighborhood string`,
       { queryCount: 4, resultCount: 3 }
     );
+
     // Clean up the research to find a list of locations that the user may be interested in
     const systemPrompt = `
 Using the research provided, extract the best places to visit based on the user's stay.
@@ -1490,6 +1526,7 @@ Research:
 
 ${JSON.stringify(research, null, 2)}
   `;
+
     const { object: neighborhoodResults } = await generateObject({
       model: registry.languageModel(defaultObjectModel),
       output: "array",
@@ -1514,20 +1551,22 @@ ${JSON.stringify(research, null, 2)}
             description: "Description of the place",
           },
         },
-        required: ["address", "description"],
+        required: ["name", "address", "description"],
       }),
     });
+
     showUpdate(`🏛️ Places found`);
 
     console.log(
       `Found ${neighborhoodResults.length} destinations:`,
-      neighborhoodPlaces.map(({ name }) => `${name}`)
+      neighborhoodResults.map(({ name }) => `${name}`)
     );
     console.debug(
       "neighborhood places results:",
       JSON.stringify(neighborhoodResults)
     );
 
+    // Get detailed information for each place
     const neighborhoodPlaces = (
       await Promise.all(
         neighborhoodResults.slice(0, count).map(async (place) => {
@@ -1536,7 +1575,7 @@ ${JSON.stringify(research, null, 2)}
               id: crypto.randomUUID(),
               ...place,
               ...(await getPlaceInfo(place.name, place.address)),
-              destination,
+              destination: { ...planNeighborhood },
               description: place.description,
             };
             return result;
@@ -1549,24 +1588,26 @@ ${JSON.stringify(research, null, 2)}
     ).filter(Boolean);
 
     // Create contexts for the existing places and new neighborhoods places
-    const existingPlaceContext = existingPlaces.map(
-      ({ id, kind, category, description, coordinates }) => ({
+    const existingPlaceContext = existingPlaces
+      .map(({ id, kind, category, description, coordinates }) => ({
         id,
         kind,
         category,
         description,
         coordinates,
-      })
-    );
-    const neighborhoodPlacesContext = neighborhoodPlaces.map(
-      ({ id, kind, category, description, coordinates }) => ({
+      }))
+      .map(JSON.stringify)
+      .join("\n");
+    const neighborhoodPlacesContext = neighborhoodPlaces
+      .map(({ id, kind, category, description, coordinates }) => ({
         id,
         kind,
         category,
         description,
         coordinates,
-      })
-    );
+      }))
+      .map(JSON.stringify)
+      .join("\n");
 
     // Clean up the research to find a list of locations that the user may be interested in
     const filterSystemPrompt = `
@@ -1590,23 +1631,24 @@ Potential Places to Visit:
 
 ${neighborhoodPlacesContext}
   `;
+
     const { object: planPlaces } = await generateObject({
       model: registry.languageModel(defaultObjectModel),
       output: "array",
       system: filterSystemPrompt,
       prompt: message,
       schema: jsonSchema({
-        title: "Destination",
+        title: "PlannedDestination",
         type: "object",
-        description: "Destination address and description",
+        description: "Planned destination with timing",
         properties: {
-          name: {
-            type: "string",
-            description: "Name of the place",
-          },
           id: {
             type: "string",
             description: "Exact id of the input place",
+          },
+          name: {
+            type: "string",
+            description: "Name of the place",
           },
           start_hour: {
             type: "number",
@@ -1615,23 +1657,74 @@ ${neighborhoodPlacesContext}
           },
           end_hour: {
             type: "number",
-            description: "Hour of day end visit from 0-24. May be fractional.",
+            description:
+              "Hour of day to end visit from 0-24. May be fractional.",
           },
         },
-        required: ["address", "description"],
+        required: ["id", "name", "start_hour", "end_hour"],
       }),
     });
-    showUpdate(`🏛️ Places found`);
+
+    showUpdate(`📅 Day plan created`);
 
     // Collect a list of all old and new places
-    const allPlaces = [...allOldPlaces, neighborhoodPlaces];
+    const allPlaces = [...allOldPlaces, ...neighborhoodPlaces];
+
+    // Get the date from the startTime (we'll use this for converting hours to timestamps)
+    const planDate = new Date(startTime * 1000);
+    planDate.setHours(0, 0, 0, 0); // Reset to beginning of day
+    const dayStartTimestamp = Math.floor(planDate.getTime() / 1000);
+
     // Convert planPlaces into standard plans based on the plan schema
-    // start_hour and end_hour should be converted into timestamps for the day given from startTime
-    // If a plan exists in existingPlans, use the old plan id, otherwise create a new UUID
-    // The time of the newly generated plan should be used, not the old plan
-    // If an existing plan was mistakenly left out, append it to the list
-    // The plan location should come from allPlaces as it has the full data
-    const plans = planPlaces.map(); // Dummy value
+    const plans = planPlaces
+      .map((planPlace) => {
+        // Find the matching place from all places
+        const placeDetails = allPlaces.find((p) => p.id === planPlace.id);
+
+        if (!placeDetails) {
+          console.warn(
+            `Could not find details for place with id ${planPlace.id}`
+          );
+          return null;
+        }
+
+        // Convert start_hour and end_hour to timestamps
+        const startTimestamp =
+          dayStartTimestamp + Math.floor(planPlace.start_hour * 3600);
+        const endTimestamp =
+          dayStartTimestamp + Math.floor(planPlace.end_hour * 3600);
+
+        // Check if this is an existing plan
+        const existingPlan = existingPlans.find(
+          (p) => p.location?.id === planPlace.id
+        );
+
+        return {
+          id: existingPlan?.id || crypto.randomUUID(),
+          start_time: startTimestamp,
+          end_time: endTimestamp,
+          location: placeDetails,
+          transportation: null,
+          notes: null,
+        };
+      })
+      .filter(Boolean);
+
+    // Check if any existing plans were left out and add them
+    for (const existingPlan of existingPlans) {
+      const isIncluded = plans.some(
+        (p) =>
+          p.id === existingPlan.id ||
+          p.location?.id === existingPlan.location?.id
+      );
+      if (!isIncluded && existingPlan.location) {
+        plans.push(existingPlan);
+      }
+    }
+
+    // Sort plans by start time
+    plans.sort((a, b) => a.start_time - b.start_time);
+
     return plans;
   } catch (error) {
     showUpdate(`❌ Day plan research failed`);
