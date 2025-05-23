@@ -1633,16 +1633,18 @@ The plan should take place during reasonable hours.
 Restaurants should be planned at an appropriate time of day to eat.
 Take into account how hungry the user may be at different times based on activity level.
 Restaurants should only be included if they are conveniently located, otherwise the user can look up additional restaurants later.
+The places listed must visit do not have to be the first places visited. They should be sensibly scheduled with the other places.
 The places under the must visit section MUST be included in the output plan.
 
-Must Visit Places:
-
-${existingPlaceContext}
+Traveler Preferences:
+${JSON.stringify(preferences)}
 
 Potential Places to Visit:
-
 ${neighborhoodPlacesContext}
-  `;
+
+Must Visit Places:
+${existingPlaceContext}
+`;
 
     const { object: planPlaces } = await generateObject({
       model: registry.languageModel(defaultObjectModel),

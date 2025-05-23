@@ -135,7 +135,7 @@ function renderTrip(trip) {
   ).textContent = `${trip.timeline.trip_days} days`;
   document.getElementById(
     "tripOrigin"
-  ).textContent = `From: ${trip.preferences.origin.name}`;
+  ).textContent = `${trip.preferences.origin.address}`;
   document.getElementById(
     "tripTravelers"
   ).textContent = `Travelers: ${trip.preferences.traveler_count}`;

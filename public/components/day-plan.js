@@ -381,6 +381,11 @@ class DayPlan extends HTMLElement {
           transition: background-color 0.2s;
         }
 
+        .magic-button:disabled {
+          pointer-events: none;
+          opacity: 0.75;
+        }
+
         .magic-button:hover {
           background-color: #8e44ad;
           color: white;
